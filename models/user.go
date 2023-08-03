@@ -1,16 +1,17 @@
 package models
 
-import "time"
+import (
+	"gorm.io/gorm"
+)
 
 type User struct {
 	// base info
-	ID              int64     `json:"id" gorm:"primaryKey"`
-	Name            string    `json:"name"`
-	Password        string    `json:"password"`
-	Avatar          string    `json:"avatar"`
-	BackgroundImage string    `json:"background_image"`
-	Signature       string    `json:"signature"`
-	CreatedAt       time.Time `json:"created_at"`
+	gorm.Model
+	Name            string `json:"name"`
+	Password        string `json:"password"`
+	Avatar          string `json:"avatar"`
+	BackgroundImage string `json:"background_image"`
+	Signature       string `json:"signature"`
 
 	//	自引用follow
 	Follow []*User `gorm:"many2many:user_follows"`
