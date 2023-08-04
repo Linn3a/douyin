@@ -2,7 +2,7 @@
 
 ## commit规范
 
-commit message遵循 ==Angular规范==
+commit message遵循 **Angular规范**
 
 [参考文章](https://zhuanlan.zhihu.com/p/182553920)
 
@@ -104,7 +104,7 @@ commit message遵循 ==Angular规范==
 
 ## 工作流
 
-![b4df79ccbd27c0fc7c4c8f9015e2a18](D:\dev\backend\project\douyin\docs\assets\b4df79ccbd27c0fc7c4c8f9015e2a18.png)
+![b4df79ccbd27c0fc7c4c8f9015e2a18](assets/b4df79ccbd27c0fc7c4c8f9015e2a18.png)
 
 ### pr流程
 
