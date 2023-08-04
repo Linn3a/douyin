@@ -14,7 +14,10 @@ type User struct {
 	Signature       string `json:"signature"`
 
 	//	自引用follow
-	Follow []*User `gorm:"many2many:user_follows"`
+	Follow []*User `gorm:"many2many:user_follows;joinForeignKey:followed_id;joinReferences:follower_id"`
+	// followed: 被关注人
+	// follower: 粉丝
+
 	//  发出消息
 	SendMessage []Message `gorm:"foreignKey:from_user_id"`
 	//  收到消息
