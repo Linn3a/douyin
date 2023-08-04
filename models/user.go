@@ -23,7 +23,7 @@ type User struct {
 	//  收到消息
 	ReceiveMessage []Message `gorm:"foreignKey:to_user_id"`
 	//  发表的评论
-	Commnet []Comment
+	Comment []Comment
 	//  发布的视频
 	CreatedVideo []Video `gorm:"foreignKey:AuthorID"`
 	//  喜欢的视频
