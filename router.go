@@ -1,7 +1,8 @@
 package main
 
 import (
-	"douyin/controller"
+	"github.com/Eacient/douyin/controller"
+	"github.com/Eacient/douyin/service"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -15,9 +16,9 @@ func initRouter(app *fiber.App) {
 
 	// basic apis
 	apiRouter.Get("/feed/", controller.Feed)
-	apiRouter.Get("/user/", controller.UserInfo)
-	apiRouter.Post("/user/register/", controller.Register)
-	apiRouter.Post("/user/login/", controller.Login)
+	apiRouter.Get("/user/", service.UserInfo)
+	apiRouter.Post("/user/register/", service.Register)
+	apiRouter.Post("/user/login/", service.Login)
 	apiRouter.Post("/publish/action/", controller.Publish)
 	apiRouter.Get("/publish/list/", controller.PublishList)
 

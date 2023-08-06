@@ -5,9 +5,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"os"
+	"github.com/Eacient/douyin/public"
 )
 
 func main() {
+	public.InitDatabase()
 	go service.RunMessageServer()
 	app := fiber.New()
 	app.Use(logger.New())
