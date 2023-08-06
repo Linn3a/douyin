@@ -1,15 +1,17 @@
 package controller
 
 import (
+	"douyin/models"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
 	"net/http"
 	"path/filepath"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type VideoListResponse struct {
 	Response
-	VideoList []Video `json:"video_list"`
+	VideoList []models.Video `json:"video_list"`
 }
 
 // Publish check token then save upload file to public directory
@@ -33,7 +35,7 @@ func Publish(c *fiber.Ctx) error {
 
 	filename := filepath.Base(data.Filename)
 	user := usersLoginInfo[token]
-	finalName := fmt.Sprintf("%d_%s", user.Id, filename)
+	finalName := fmt.Sprintf("%d_%s", user.ID, filename)
 	saveFile := filepath.Join("./public/", finalName)
 	if err := c.SaveFile(data, saveFile); err != nil {
 		return c.Status(http.StatusOK).JSON(Response{
