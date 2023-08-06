@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Eacient/douyin/service"
+	"douyin/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"os"

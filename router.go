@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Eacient/douyin/controller"
+	"douyin/controller"
 	"github.com/gofiber/fiber/v2"
 )
 
