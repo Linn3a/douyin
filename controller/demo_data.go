@@ -1,30 +1,37 @@
 package controller
 
-var DemoVideos = []Video{
+import (
+	"douyin/models"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+var DemoVideos = []models.Video{
 	{
-		Id:            1,
-		Author:        DemoUser,
-		PlayUrl:       "https://www.w3schools.com/html/movie.mp4",
-		CoverUrl:      "https://cdn.pixabay.com/photo/2016/03/27/18/10/bear-1283347_1280.jpg",
-		FavoriteCount: 0,
-		CommentCount:  0,
-		IsFavorite:    false,
+		Model: gorm.Model{
+			ID: 1,
+		},
+		AuthorID: DemoUser.ID,
+		PlayUrl:  "https://www.w3schools.com/html/movie.mp4",
+		CoverUrl: "https://cdn.pixabay.com/photo/2016/03/27/18/10/bear-1283347_1280.jpg",
 	},
 }
 
-var DemoComments = []Comment{
+var DemoComments = []models.Comment{
 	{
-		Id:         1,
-		User:       DemoUser,
-		Content:    "Test Comment",
-		CreateDate: "05-01",
+		Model: gorm.Model{
+			ID:        1,
+			CreatedAt: time.Date(2023, 05, 01, 0, 0, 0, 0, time.Local),
+		},
+		Content: "Test Comment",
+		UserId:  DemoUser.ID,
 	},
 }
 
-var DemoUser = User{
-	Id:            1,
-	Name:          "TestUser",
-	FollowCount:   0,
-	FollowerCount: 0,
-	IsFollow:      false,
+var DemoUser = models.User{
+	Model: gorm.Model{
+		ID: 1,
+	},
+	Name: "TestUser",
 }

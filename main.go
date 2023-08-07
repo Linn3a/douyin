@@ -1,16 +1,16 @@
 package main
 
 import (
-	"douyin/service"
+	// "douyin/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"os"
-	"github.com/Eacient/douyin/public"
+	"douyin/public"
 )
 
 func main() {
 	public.InitDatabase()
-	go service.RunMessageServer()
+	// go service.RunMessageServer()
 	app := fiber.New()
 	app.Use(logger.New())
 	initRouter(app)
