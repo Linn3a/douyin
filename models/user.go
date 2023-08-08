@@ -29,3 +29,29 @@ type User struct {
 	//  喜欢的视频
 	LikeVideo []Video `gorm:"many2many:video_likes"` // many2many关系 连接表名video_likes
 }
+
+// 用于响应http请求的结构
+// TODO: add info from other service
+type UserInfo struct {
+	id   int64
+	name string
+	// follow_count     int64
+	// follower_count   int64
+	// is_follow        bool
+	avatar           string
+	background_image string
+	signature        string
+	// total_favorited  int64
+	// work_count       int64
+	// favorite_count   int64
+}
+
+func NewUserInfo(u *User) UserInfo {
+	return UserInfo{
+		id:               int64((*u).ID),
+		name:             (*u).Name,
+		avatar:           (*u).Avatar,
+		background_image: (*u).BackgroundImage,
+		signature:        (*u).Signature,
+	}
+}
