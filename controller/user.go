@@ -35,17 +35,31 @@ type UserLoginResponse struct {
 	Token  string `json:"token"`
 }
 
+// TODO: add info from other service
+type userInfo struct {
+	id               int64
+	name             string
+	// follow_count     int64
+	// follower_count   int64
+	// is_follow        bool
+	avatar           string
+	background_image string
+	signature        string
+	// total_favorited  int64
+	// work_count       int64
+	// favorite_count   int64
+}
+
 type UserResponse struct {
 	Response
-	User models.User `json:"user"`
+	User userInfo `json:"user"`
 }
 
 func Register(c *fiber.Ctx) error {
 	username := c.Query("username")
 	password := c.Query("password")
 
-	_, err := service.GetUserByName(username)
-	if err == nil {
+	if _, err := service.GetUserByName(username); err == nil {
 		fmt.Println("The suer exits")
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
@@ -59,8 +73,8 @@ func Register(c *fiber.Ctx) error {
 		Name:     username,
 		Password: password,
 	}
-	err = service.CreateUser(&newUser)
-	if err != nil {
+
+	if err := service.CreateUser(&newUser); err != nil {
 		fmt.Println("插入失败", err)
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
@@ -71,12 +85,23 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	fmt.Println("插入成功")
+	if token, err := service.GenerateToken(&newUser); err == nil {
+		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
+			Response: Response{
+				StatusCode: 0,
+			},
+			UserId: int64(newUser.ID),
+			Token:  token,
+		})
+	}
+
+	fmt.Println("创建token失败")
 	return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 		Response: Response{
-			StatusCode: 0,
+			StatusCode: 3,
+			StatusMsg:  "Unable to create token",
 		},
 		UserId: int64(newUser.ID),
-		Token:  username + password,
 	})
 }
 
@@ -98,38 +123,67 @@ func Login(c *fiber.Ctx) error {
 	if user.Password != password {
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
-				StatusCode: 1,
+				StatusCode: 2,
 				StatusMsg:  "Password doesn't match",
 			},
 		})
 	}
 
+	if token, err := service.GenerateToken(&user); err == nil {
+		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
+			Response: Response{
+				StatusCode: 0,
+				StatusMsg:  "Login successfully",
+			},
+			UserId: int64(user.ID),
+			Token:  token,
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 		Response: Response{
-			StatusCode: 0,
+			StatusCode: 2,
+			StatusMsg:  "Unable to create token",
 		},
-		UserId: int64(user.ID),
-		Token:  username + password,
 	})
 }
+
 
 func UserInfo(c *fiber.Ctx) error {
 	token := c.Query("token")
 	uid, _ := strconv.Atoi(c.Query("user_id"))
 
-	if user, err := service.GetUserById(uint(uid)); err != nil && token == token {
-		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
-			Response: Response{
-				StatusCode: 1,
-				StatusMsg:  "User not exits",
-			},
-		})
-	} else {
-		return c.Status(http.StatusOK).JSON(
+	if user, err := service.GetUserById(uint(uid)); err != nil {
+		if _, err := service.ParseToken(token); err == nil {
+			return c.Status(http.StatusOK).JSON(
+				UserResponse{
+					Response: Response{StatusCode: 0},
+					User:     userInfo{
+						id: int64(user.ID),
+						name: user.Name,
+						avatar: user.Avatar,
+						background_image: user.BackgroundImage,
+						signature: user.Signature,
+					},
+				},
+			)
+		}
+
+		return c.Status(fiber.StatusOK).JSON(
 			UserResponse{
-				Response: Response{StatusCode: 0},
-				User:     user,
+				Response: Response{
+					StatusCode: 1,
+					StatusMsg:  "user unauthorized",
+				},
 			},
 		)
 	}
+	return c.Status(fiber.StatusOK).JSON(
+		UserResponse{
+			Response: Response{
+				StatusCode: 2,
+				StatusMsg:  "user not exist",
+			},
+		},
+	)
 }

@@ -5,6 +5,7 @@ import (
 	// "sync/atomic"
 	"douyin/models"
 	"douyin/public"
+	"douyin/utils/jwt"
 )
 
 func GetUserByName(userName string) (models.User, error) {
@@ -26,4 +27,23 @@ func GetUserById(ID uint) (models.User, error) {
 		return tmp, err
 	}
 	return tmp, nil
+}
+
+func GenerateToken(u *models.User) (string, error) {
+	// TODO: Add expired time to token claims
+	if token, err := public.Jwt.CreateToken(jwt.CustomClaims{
+		Id: int64((*u).ID),
+	}); err == nil {
+		return token, nil
+	} else {
+		return token, err
+	}
+}
+
+func ParseToken(token string) (*jwt.CustomClaims, error) {
+	if token, err := public.Jwt.ParseToken(token); err == nil {
+		return token, nil
+	} else {
+		return nil, err
+	}
 }
