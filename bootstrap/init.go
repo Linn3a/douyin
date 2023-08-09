@@ -2,22 +2,25 @@ package bootstrap
 
 import (
 	"douyin/config"
-	"fmt"
-	"github.com/spf13/viper"
+	"douyin/controller"
+	"douyin/models"
+	"douyin/public"
+	"github.com/gofiber/fiber/v2"
 )
 
-func Init() {
-	v := viper.New()
-	v.SetConfigFile("config/config.json")
-	v.SetConfigType("json")
-	if err := v.ReadInConfig(); err != nil {
-		panic(fmt.Errorf("read config failed: %s \n", err))
+func Init() (*fiber.App, error) {
+	err := config.InitConfig()
+	if err != nil {
+		return nil, err
 	}
-	//println(v)
-	//fmt.Printf("%+v", v)
-	testConfig := config.Config{}
-	if err := v.Unmarshal(&testConfig); err != nil {
-		fmt.Println(err)
+	err = models.InitDB()
+	if err != nil {
+		return nil, err
 	}
-	fmt.Printf("%+v", testConfig)
+	public.InitJWT()
+
+	app := fiber.New()
+	controller.RegisterRoutes(app)
+
+	return app, err
 }

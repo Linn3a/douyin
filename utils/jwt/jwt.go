@@ -13,7 +13,7 @@ type JWT struct {
 
 // private claims, share information between parties that agree on using them
 type CustomClaims struct {
-	Id int64
+	ID int64
 	// TODO: add feature for different authority of different user
 	// AuthorityId int64
 	jwt.StandardClaims
