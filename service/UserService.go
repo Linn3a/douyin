@@ -10,20 +10,20 @@ import (
 
 func GetUserByName(userName string) (models.User, error) {
 	tmp := models.User{}
-	if err := public.DBConn.Where("name = ?", userName).First(&tmp).Error; err != nil {
+	if err := models.DB.Where("name = ?", userName).First(&tmp).Error; err != nil {
 		return tmp, err
 	}
 	return tmp, nil
 }
 
 func CreateUser(newUser *models.User) error {
-	err := public.DBConn.Create(newUser).Error
+	err := models.DB.Create(newUser).Error
 	return err
 }
 
 func GetUserById(ID uint) (models.User, error) {
 	tmp := models.User{}
-	if err := public.DBConn.First(&tmp, ID).Error; err != nil {
+	if err := models.DB.First(&tmp, ID).Error; err != nil {
 		return tmp, err
 	}
 	return tmp, nil
@@ -63,7 +63,7 @@ func GetUserInfoById(id uint) (models.UserInfo, error) {
 
 func GetUsersByIds(uids []uint) ([]models.User, error) {
 	users := make([]models.User, len(uids))
-	err := public.DBConn.Where("id in ?", uids).Find(&users).Error
+	err := models.DB.Where("id in ?", uids).Find(&users).Error
 	return users, err
 }
 
@@ -71,7 +71,7 @@ func GetUserInfosByIds(uids []uint) (map[uint]models.UserInfo, error) {
 	if users, err := GetUsersByIds(uids); err == nil {
 		// userInfos := make([]models.UserInfo, len(users))
 		userInfoIdMap := make(map[uint]models.UserInfo, len(users))
-		for _, u := range(users) {
+		for _, u := range users {
 			userInfoIdMap[u.ID] = GenerateUserInfo(&u)
 		}
 		return userInfoIdMap, nil

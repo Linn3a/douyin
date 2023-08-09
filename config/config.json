@@ -7,9 +7,9 @@
   },
   "database": {
     "mysql": {
-      "host": "localhost",
+      "host": "127.0.0.1",
       "port": 3306,
-      "user": "root",
+      "username": "root",
       "password": "123456",
       "database": "douyin",
       "charset": "utf8mb4",

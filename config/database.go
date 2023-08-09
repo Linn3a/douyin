@@ -7,7 +7,7 @@ type Database struct {
 type Mysql struct {
 	DriverName          string `mapstructure:"driver_name" json:"driver_name " yaml:"driver_name"`
 	Host                string `mapstructure:"host" json:"host" yaml:"host"`
-	Port                int    `mapstructure:"port" json:"port" yaml:"port"`
+	Port                string `mapstructure:"port" json:"port" yaml:"port"`
 	Database            string `mapstructure:"database" json:"database" yaml:"database"`
 	UserName            string `mapstructure:"username" json:"username" yaml:"username"`
 	Password            string `mapstructure:"password" json:"password" yaml:"password"`
