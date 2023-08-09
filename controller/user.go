@@ -35,24 +35,9 @@ type UserLoginResponse struct {
 	Token  string `json:"token"`
 }
 
-// TODO: add info from other service
-type userInfo struct {
-	id               int64
-	name             string
-	// follow_count     int64
-	// follower_count   int64
-	// is_follow        bool
-	avatar           string
-	background_image string
-	signature        string
-	// total_favorited  int64
-	// work_count       int64
-	// favorite_count   int64
-}
-
 type UserResponse struct {
 	Response
-	User userInfo `json:"user"`
+	User models.UserInfo `json:"user"`
 }
 
 func Register(c *fiber.Ctx) error {
@@ -148,33 +133,25 @@ func Login(c *fiber.Ctx) error {
 	})
 }
 
-
 func UserInfo(c *fiber.Ctx) error {
 	token := c.Query("token")
 	uid, _ := strconv.Atoi(c.Query("user_id"))
-
-	if user, err := service.GetUserById(uint(uid)); err != nil {
-		if _, err := service.ParseToken(token); err == nil {
-			return c.Status(http.StatusOK).JSON(
-				UserResponse{
-					Response: Response{StatusCode: 0},
-					User:     userInfo{
-						id: int64(user.ID),
-						name: user.Name,
-						avatar: user.Avatar,
-						background_image: user.BackgroundImage,
-						signature: user.Signature,
-					},
-				},
-			)
-		}
-
-		return c.Status(fiber.StatusOK).JSON(
+	if _, err := service.ParseToken(token); err != nil {
+		return c.Status(http.StatusOK).JSON(
 			UserResponse{
 				Response: Response{
 					StatusCode: 1,
 					StatusMsg:  "user unauthorized",
 				},
+				
+			},
+		)
+	}
+	if user, err := service.GetUserById(uint(uid)); err != nil {
+		return c.Status(fiber.StatusOK).JSON(
+			UserResponse{
+				Response: Response{StatusCode: 0},
+				User: service.GenerateUserInfo(&user),
 			},
 		)
 	}
