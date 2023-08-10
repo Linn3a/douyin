@@ -2,8 +2,8 @@ package controller
 
 import (
 	"log"
-
-	// "douyin/service"
+	"os"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,6 +14,10 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendFile("./templates/index.html")
 	})
+	app.Use(logger.New(logger.Config{
+		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
+		Output: os.Stdout,
+	}))
 	apiRouter := app.Group("/douyin")
 
 	// basic apis

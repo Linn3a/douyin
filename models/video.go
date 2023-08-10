@@ -12,3 +12,28 @@ type Video struct {
 	AuthorID uint      `json:"author_id"` // has many关系下游 在User中重设外键为AuthorID
 	Comment  []Comment // has many关系上游 对应外键字段VideoID，引用ID
 }
+
+// 用于响应http请求的结构
+type VideoInfo struct {
+	ID  		 	int64  		`json:"id"`
+	Author	 	 	UserInfo 	`json:"author"`
+	Title    	 	string      `json:"title"`
+	PlayUrl  	 	string      `json:"play_url"`
+	CoverUrl 	 	string      `json:"cover_url"`
+	FavoriteCount   int64 		`json:"favorite_count"`
+	CommentCount    int64 		`json:"comment_count"`
+	IsFavorite	    bool        `json:"is_favorite"`
+}
+
+func NewVideoInfo(v *Video) VideoInfo {
+	return VideoInfo{
+		ID:               int64((*v).ID),
+		Author:	 	 	  UserInfo{},
+		Title:    	 	  v.Title,  
+		PlayUrl:  	 	  v.PlayUrl,  
+		CoverUrl: 	 	  v.CoverUrl,    
+		FavoriteCount:    0,
+		CommentCount:     0,
+		IsFavorite:	      false,
+	}
+}
