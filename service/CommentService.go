@@ -2,43 +2,42 @@ package service
 
 import (
 	"douyin/models"
-	"douyin/public"
 	"fmt"
 )
 
 func CreateComment(newComment *models.Comment) error {
-	err := public.DBConn.Create(newComment).Error
+	err := models.DB.Create(newComment).Error
 	return err
 }
 
 func DeleteComment(id uint) error {
-	err := public.DBConn.Delete(&models.Comment{}, id).Error
+	err := models.DB.Delete(&models.Comment{}, id).Error
 	return err
 }
 
 func GetCommentsByVideoId(vid uint) ([]models.Comment, error) {
 	comments := []models.Comment{}
-	err := public.DBConn.Where("video_id=?", vid).Find(&comments).Error
+	err := models.DB.Where("video_id=?", vid).Find(&comments).Error
 	return comments, err
 }
 
 func CountCommentsByVideoId(vid uint) (int64, error) {
 	comments := []models.Comment{}
-	err := public.DBConn.Where("video_id=?", vid).Find(&comments).Error
+	err := models.DB.Where("video_id=?", vid).Find(&comments).Error
 	counts := int64(len(comments))
 	return counts, err
 }
 
 func CountCommentsByVideoIds(vids []uint) (map[uint]int64, error) {
 	var queryResults []map[string]interface{}
-    err := public.DBConn.Table("comments").
-        Select("video_id as vid, COUNT(id) as cid_count").
+	err := models.DB.Table("comments").
+		Select("video_id as vid, COUNT(id) as cid_count").
 		Where("video_id IN ?", vids).
-        Group("video_id").
-        Find(&queryResults).Error
+		Group("video_id").
+		Find(&queryResults).Error
 	counts := make(map[uint]int64, len(vids))
-	for _, result := range(queryResults) {
-		counts[result["vid"].(uint)] = int64(result["cid_count"].(int))
+	for _, result := range queryResults {
+		counts[uint(result["vid"].(int64))] = result["cid_count"].(int64)
 	}
 	return counts, err
 }

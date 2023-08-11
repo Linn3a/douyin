@@ -14,8 +14,8 @@ func FavoriteAction(c *fiber.Ctx) error {
 	token := c.Query("token")
 	claimPtr, err := service.ParseToken(token)
 	if err != nil {
-		fmt.Printf("User Unauthorized: %v\n", err)
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: "Unauthorized"})
+		fmt.Printf("token invalid: %v\n", err)
+		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: "token invalid"})
 	}
 	uid := uint((*claimPtr).ID)
 	videoId := c.Query("video_id")
@@ -26,12 +26,16 @@ func FavoriteAction(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(Response{StatusCode: 2, StatusMsg: "User doesn't exist"})
 	}
 	if actionType == "1" {
+		// TODO: 已经点过赞的需要报错吗?
 		if err := service.AddFavoriteVideo(uid, uint(vid)); err != nil {
+			fmt.Printf("add favorite failed: %v\n", err)
 			return c.Status(http.StatusOK).JSON(Response{StatusCode: 3, StatusMsg: "add favorite failed"})
 		}
 		return c.Status(http.StatusOK).JSON(Response{StatusCode: 0})
 	} else {
+		// TODO: 先前没关注需要报错吗?
 		if err := service.DeleteFavoriteVideo(uid, uint(vid)); err != nil {
+			fmt.Printf("delete favorite failed: %v\n", err)
 			return c.Status(http.StatusOK).JSON(Response{StatusCode: 4, StatusMsg: "delete favorite failed"})
 		}
 		return c.Status(http.StatusOK).JSON(Response{StatusCode: 0})
@@ -42,8 +46,8 @@ func FavoriteList(c *fiber.Ctx) error {
 	token := c.Query("token")
 	claimPtr, err := service.ParseToken(token)
 	if err != nil {
-		fmt.Printf("User Unauthorized: %v\n", err)
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: "Unauthorized"})
+		fmt.Printf("token invalid: %v\n", err)
+		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: "token invalid"})
 	}
 	uid := uint((*claimPtr).ID)
 
@@ -59,6 +63,7 @@ func FavoriteList(c *fiber.Ctx) error {
 		authorIds[ind] = video.AuthorID
 		videoIds[ind] = video.ID
 	}
+
 	userInfos, err := service.GetUserInfosByIds(authorIds)
 	if err != nil {
 		fmt.Printf("userInfos get error: %v\n", err)
@@ -86,6 +91,6 @@ func FavoriteList(c *fiber.Ctx) error {
 		Response: Response{
 			StatusCode: 0,
 		},
-		VideoList: DemoVideos,
+		VideoList: videoInfos,
 	})
 }

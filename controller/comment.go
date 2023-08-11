@@ -24,11 +24,12 @@ func CommentAction(c *fiber.Ctx) error {
 	token := c.Query("token")
 	claimPtr, err := service.ParseToken(token)
 	if err != nil {
-		fmt.Printf("User Unauthorized: %v\n", err)
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg:  "Unauthorized"})
+		fmt.Printf("token invalid: %v\n", err)
+		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg:  "token invalid"})
 	} 
 	uid := uint((*claimPtr).ID)
 	videoId := c.Query("video_id"); vid, _ := strconv.Atoi(videoId)
+	// TODO: vid不存在是否报错
 	actionType := c.Query("action_type")
 	if _, err := service.GetUserById(uid); err != nil {
 		fmt.Printf("user don't exist: %v\n", err)
@@ -68,20 +69,21 @@ func CommentAction(c *fiber.Ctx) error {
 func CommentList(c *fiber.Ctx) error {
 	token := c.Query("token")
 	if _, err := service.ParseToken(token); err != nil {
-		fmt.Printf("User Unauthorized: %v\n", err)
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg:  "Unauthorized"})
+		fmt.Printf("token invalid: %v\n", err)
+		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg:  "token invalid"})
 	}
 	videoId := c.Query("video_id"); vid, _ := strconv.Atoi(videoId)
+	// TODO: vid不存在是否报错
 	commentInfos, err := service.GetCommentInfosByVideoId(uint(vid))
 	if err != nil {
 		fmt.Printf("get commentInfos failed: %v\n", err)
 		return c.Status(http.StatusOK).JSON(Response{StatusCode: 2, StatusMsg: "get commentInfos failed"})
 	}
-	if len(commentInfos) == 0 {
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 3, StatusMsg: "no comments found"})
-	}
+	// if len(commentInfos) == 0 {
+	// 	return c.Status(http.StatusOK).JSON(Response{StatusCode: 3, StatusMsg: "no comments found"})
+	// }
 	return c.Status(http.StatusOK).JSON(CommentListResponse{
-			Response: Response{StatusCode: 0},
-			CommentList: commentInfos,
+		Response: Response{StatusCode: 0},
+		CommentList: commentInfos,
 	})
 }
