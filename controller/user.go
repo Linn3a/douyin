@@ -45,7 +45,7 @@ func Register(c *fiber.Ctx) error {
 	password := c.Query("password")
 
 	if _, err := service.GetUserByName(username); err == nil {
-		fmt.Println("The suer exits")
+		fmt.Println("The user exits")
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
 				StatusCode: 1,
@@ -136,31 +136,41 @@ func Login(c *fiber.Ctx) error {
 func UserInfo(c *fiber.Ctx) error {
 	token := c.Query("token")
 	uid, _ := strconv.Atoi(c.Query("user_id"))
-	if _, err := service.ParseToken(token); err != nil {
+	if claims, err := service.ParseToken(token); err != nil {
 		return c.Status(http.StatusOK).JSON(
 			UserResponse{
 				Response: Response{
 					StatusCode: 1,
 					StatusMsg:  "user unauthorized",
+				},	
+			},
+		)
+	}else{
+		fromId := uint(claims.ID)
+
+		if user, err := service.GetUserById(uint(uid)); err == nil {
+			UserInfo :=  service.GenerateUserInfo(&user)
+			if fromId != uint(uid){
+				UserInfo.IsFollow = service.HasRelation(fromId,uint(uid))
+			}
+			return c.Status(fiber.StatusOK).JSON(
+				UserResponse{
+					Response: Response{StatusCode: 0},
+					User: UserInfo ,
 				},
-				
-			},
-		)
+			)
+		}else{
+			return c.Status(fiber.StatusOK).JSON(
+				UserResponse{
+					Response: Response{
+						StatusCode: 2,
+						StatusMsg:  "user not exist",
+					},
+				},
+			)
+		}
 	}
-	if user, err := service.GetUserById(uint(uid)); err != nil {
-		return c.Status(fiber.StatusOK).JSON(
-			UserResponse{
-				Response: Response{StatusCode: 0},
-				User: service.GenerateUserInfo(&user),
-			},
-		)
-	}
-	return c.Status(fiber.StatusOK).JSON(
-		UserResponse{
-			Response: Response{
-				StatusCode: 2,
-				StatusMsg:  "user not exist",
-			},
-		},
-	)
+
+	
+	
 }

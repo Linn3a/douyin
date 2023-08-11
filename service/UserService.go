@@ -32,7 +32,7 @@ func GetUserById(ID uint) (models.User, error) {
 func GenerateToken(u *models.User) (string, error) {
 	// TODO: Add expired time to token claims
 	if token, err := public.Jwt.CreateToken(jwt.CustomClaims{
-		ID: int64((*u).ID),
+		Id: int64((*u).ID),
 	}); err == nil {
 		return token, nil
 	} else {
@@ -49,7 +49,12 @@ func ParseToken(token string) (*jwt.CustomClaims, error) {
 }
 
 func GenerateUserInfo(u *models.User) models.UserInfo {
-	return models.NewUserInfo(u)
+	// TODO: add info for other field 
+	//	e.g. total_favorite, work_count,etc.
+	UserInfo := models.NewUserInfo(u)
+	UserInfo.FollowCount,_ = GetFollowCnt(u.ID)
+	UserInfo.FollowerCount,_ = GetFollowerCnt(u.ID)
+	return UserInfo
 }
 
 func GetUserInfoById(id uint) (models.UserInfo, error) {
