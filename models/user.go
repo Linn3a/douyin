@@ -27,7 +27,7 @@ type User struct {
 	//  发布的视频
 	CreatedVideo []Video `gorm:"foreignKey:AuthorID"`
 	//  喜欢的视频
-	LikeVideo []Video `gorm:"many2many:video_likes"` // many2many关系 连接表名video_likes
+	LikeVideo []*Video `gorm:"many2many:video_likes"` // many2many关系 连接表名video_likes
 }
 
 // 用于响应http请求的结构

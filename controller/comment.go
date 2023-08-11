@@ -22,13 +22,12 @@ type CommentActionResponse struct {
 
 func CommentAction(c *fiber.Ctx) error {
 	token := c.Query("token")
-	var uid uint
-	if claimPtr, err := service.ParseToken(token); err != nil {
+	claimPtr, err := service.ParseToken(token)
+	if err != nil {
 		fmt.Printf("User Unauthorized: %v\n", err)
 		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg:  "Unauthorized"})
-	} else {
-		uid = uint((*claimPtr).ID)
-	}
+	} 
+	uid := uint((*claimPtr).ID)
 	videoId := c.Query("video_id"); vid, _ := strconv.Atoi(videoId)
 	actionType := c.Query("action_type")
 	if _, err := service.GetUserById(uid); err != nil {
@@ -46,15 +45,15 @@ func CommentAction(c *fiber.Ctx) error {
 			fmt.Printf("db create comment failed: %v\n", err)
 			return c.Status(http.StatusOK).JSON(Response{StatusCode: 3, StatusMsg: "create comment failed"})
 		}
-		if commentInfo, err :=  service.GenerateCommentInfo(&comment); err != nil {
+		commentInfo, err :=  service.GenerateCommentInfo(&comment)
+		if err != nil {
 			fmt.Printf("get user info failed: %v\n", err)
 			return c.Status(http.StatusOK).JSON(Response{StatusCode: 4, StatusMsg: "get userinfo failed"})	
-		} else {
-			return c.Status(http.StatusOK).JSON(CommentActionResponse{
-				Response: Response{StatusCode: 0},
-				Comment: commentInfo,
-			})
 		}
+		return c.Status(http.StatusOK).JSON(CommentActionResponse{
+			Response: Response{StatusCode: 0},
+			Comment: commentInfo,
+		})
 	} else {
 		commentId := c.Query("comment_id"); cid, _ := strconv.Atoi(commentId)
 		if err := service.DeleteComment(uint(cid)); err != nil {
@@ -73,16 +72,16 @@ func CommentList(c *fiber.Ctx) error {
 		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg:  "Unauthorized"})
 	}
 	videoId := c.Query("video_id"); vid, _ := strconv.Atoi(videoId)
-	if commentInfos, err := service.GetCommentInfosByVideoId(uint(vid)); err != nil {
+	commentInfos, err := service.GetCommentInfosByVideoId(uint(vid))
+	if err != nil {
 		fmt.Printf("get commentInfos failed: %v\n", err)
 		return c.Status(http.StatusOK).JSON(Response{StatusCode: 2, StatusMsg: "get commentInfos failed"})
-	} else {
-		if len(commentInfos) == 0 {
-			return c.Status(http.StatusOK).JSON(Response{StatusCode: 3, StatusMsg: "no comments found"})
-		}
-		return c.Status(http.StatusOK).JSON(CommentListResponse{
-				Response: Response{StatusCode: 0},
-				CommentList: commentInfos,
-		})
 	}
+	if len(commentInfos) == 0 {
+		return c.Status(http.StatusOK).JSON(Response{StatusCode: 3, StatusMsg: "no comments found"})
+	}
+	return c.Status(http.StatusOK).JSON(CommentListResponse{
+			Response: Response{StatusCode: 0},
+			CommentList: commentInfos,
+	})
 }
