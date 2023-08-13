@@ -11,7 +11,7 @@ import (
 
 type VideoListResponse struct {
 	Response
-	VideoList []models.Video `json:"video_list"`
+	VideoList []models.VideoInfo `json:"video_list"`
 }
 
 // Publish check token then save upload file to public directory
@@ -57,7 +57,7 @@ func PublishList(c *fiber.Ctx) error {
 		Response: Response{
 			StatusCode: 0,
 		},
-		VideoList: DemoVideos,
+		VideoList: []models.VideoInfo{},
 	})
 }
 

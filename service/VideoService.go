@@ -2,19 +2,18 @@ package service
 
 import (
 	"douyin/models"
-	"douyin/public"
 	"fmt"
 )
 
 func GetVideoById(vid uint) (models.Video, error) {
 	video := models.Video{}
-	err := public.DBConn.First(&video, vid).Error
+	err := models.DB.First(&video, vid).Error
 	return video, err
 }
 
 // func GetVideosByIds(vids []uint) ([]models.Video, error) {
 // 	videos := make([]models.Video, len(vids))
-// 	err := public.DBConn.Where("vid in ?", vids).Find(&videos).Error
+// 	err := models.DB.Where("vid in ?", vids).Find(&videos).Error
 // 	return videos, err
 // }
 
@@ -23,8 +22,8 @@ func GetVideosByUserId(uid uint) ([]models.Video, error) {
 		return []models.Video{}, fmt.Errorf("user not found: %v", err)
 	} else {
 		videos := make([]models.Video, 10)
-		err := public.DBConn.Model(&user).Association("CreatedVideo").Find(&videos)
+		err := models.DB.Model(&user).Association("CreatedVideo").Find(&videos)
 		return videos, err
 	}
-	
+
 }
