@@ -31,39 +31,40 @@ func GetUserById(ID uint) (models.User, error) {
 
 func GenerateToken(u *models.User) (string, error) {
 	// TODO: Add expired time to token claims
-	if token, err := public.Jwt.CreateToken(jwt.CustomClaims{
-		Id: int64((*u).ID),
-	}); err == nil {
-		return token, nil
-	} else {
+	token, err := public.Jwt.CreateToken(jwt.CustomClaims{ID: int64((*u).ID)}); 
+	if err != nil {
 		return token, err
 	}
+	return token, nil
 }
 
 func ParseToken(token string) (*jwt.CustomClaims, error) {
-	if token, err := public.Jwt.ParseToken(token); err == nil {
-		return token, nil
-	} else {
+	parsedToken, err := public.Jwt.ParseToken(token)
+	if err != nil {
 		return nil, err
 	}
+	return parsedToken, nil
+
 }
 
 func GenerateUserInfo(u *models.User) models.UserInfo {
-	// TODO: add info for other field 
+	// TODO: add info for other field
 	//	e.g. total_favorite, work_count,etc.
-	UserInfo := models.NewUserInfo(u)
-	UserInfo.FollowCount,_ = GetFollowCnt(u.ID)
-	UserInfo.FollowerCount,_ = GetFollowerCnt(u.ID)
-	return UserInfo
+	userInfo := models.NewUserInfo(u)
+	userInfo.FollowCount, _ = GetFollowCnt(u.ID)
+	userInfo.FollowerCount, _ = GetFollowerCnt(u.ID)
+	userInfo.FavoriteCount, _ = CountUserFavorited(u.ID)
+	userInfo.TotalFavorited, _ = CountUserFavorited(u.ID)
+	return userInfo
 }
 
 func GetUserInfoById(id uint) (models.UserInfo, error) {
-	if user, err := GetUserById(id); err == nil {
-		userInfo := GenerateUserInfo(&user)
-		return userInfo, nil
-	} else {
+	user, err := GetUserById(id)
+	if err != nil {
 		return models.UserInfo{}, err
 	}
+	userInfo := GenerateUserInfo(&user)
+		return userInfo, nil
 }
 
 func GetUsersByIds(uids []uint) ([]models.User, error) {
@@ -73,15 +74,15 @@ func GetUsersByIds(uids []uint) ([]models.User, error) {
 }
 
 func GetUserInfosByIds(uids []uint) (map[uint]models.UserInfo, error) {
-	if users, err := GetUsersByIds(uids); err == nil {
-		// userInfos := make([]models.UserInfo, len(users))
-		userInfoIdMap := make(map[uint]models.UserInfo, len(users))
-		for _, u := range users {
-			userInfoIdMap[u.ID] = GenerateUserInfo(&u)
-		}
-		return userInfoIdMap, nil
-	} else {
+	users, err := GetUsersByIds(uids)
+	if err != nil {
 		var userInfoIdMap map[uint]models.UserInfo
 		return userInfoIdMap, err
 	}
+	// fmt.Printf("users: %v\n", users)
+	userInfoIdMap := make(map[uint]models.UserInfo, len(users))
+	for _, u := range users {
+		userInfoIdMap[u.ID] = GenerateUserInfo(&u)
+	}
+	return userInfoIdMap, nil
 }

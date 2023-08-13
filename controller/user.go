@@ -4,7 +4,6 @@ import (
 	"douyin/models"
 	"douyin/service"
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -71,6 +70,7 @@ func Register(c *fiber.Ctx) error {
 
 	fmt.Println("插入成功")
 	if token, err := service.GenerateToken(&newUser); err == nil {
+		fmt.Printf("token is : %s", token)
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
 				StatusCode: 0,
@@ -135,42 +135,29 @@ func Login(c *fiber.Ctx) error {
 
 func UserInfo(c *fiber.Ctx) error {
 	token := c.Query("token")
+	claims, err := service.ParseToken(token)
+	if token == "" || err != nil {
+		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 1, StatusMsg:  "token invalid"})
+	}
 	uid, _ := strconv.Atoi(c.Query("user_id"))
-	if claims, err := service.ParseToken(token); err != nil {
-		return c.Status(http.StatusOK).JSON(
-			UserResponse{
-				Response: Response{
-					StatusCode: 1,
-					StatusMsg:  "user unauthorized",
-				},	
-			},
-		)
-	}else{
-		fromId := uint(claims.ID)
-
-		if user, err := service.GetUserById(uint(uid)); err == nil {
-			UserInfo :=  service.GenerateUserInfo(&user)
-			if fromId != uint(uid){
-				UserInfo.IsFollow = service.HasRelation(fromId,uint(uid))
-			}
-			return c.Status(fiber.StatusOK).JSON(
-				UserResponse{
-					Response: Response{StatusCode: 0},
-					User: UserInfo ,
-				},
-			)
-		}else{
-			return c.Status(fiber.StatusOK).JSON(
-				UserResponse{
-					Response: Response{
-						StatusCode: 2,
-						StatusMsg:  "user not exist",
-					},
-				},
-			)
-		}
+	fromId := uint(claims.ID)
+	if uint(uid) != fromId {
+		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 2, StatusMsg:  "user not authorized"})
 	}
 
-	
-	
+	user, err := service.GetUserById(uint(uid))
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 3, StatusMsg:  "user not exits"})
+	}
+
+	userInfo :=  service.GenerateUserInfo(&user)
+	if fromId != uint(uid){
+		userInfo.IsFollow = service.HasRelation(fromId,uint(uid))
+	}
+	return c.Status(fiber.StatusOK).JSON(
+		UserResponse{
+			Response: Response{StatusCode: 0},
+			User: userInfo ,
+		},
+	)
 }

@@ -21,7 +21,7 @@ func Feed(c *fiber.Ctx) error {
 	// fromId := uint(claims.ID)
 	
     var DemoVideoList []models.VideoInfo
-	DemoVideoInfo := models.NewVideoInfo(&DemoVideo)
+	DemoVideoInfo := models.NewVideoInfo(&DemoVideo, &models.UserInfo{}, 0, 0)
 	DemoVideoInfo.Author = service.GenerateUserInfo(&DemoUser)
 	// DemoVideoInfo.Author.IsFollow = service.HasRelation(fromId,DemoUser.ID)
 	DemoVideoList = append(DemoVideoList,DemoVideoInfo)
