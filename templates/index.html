@@ -1,20 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{{.title}}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传示例</title>
 </head>
 <body>
-<h1>Welcome to douyin API!</h1>
-<ul>
-    <li>
-        <a href="/douyin/feed/">/douyin/feed/</a>
-    </li>
-    <li>
-        <a href="/douyin/user/">/douyin/user/</a>
-    </li>
-    <li>
-        <a href="/douyin/publish/list/">/douyin/publish/list/</a>
-    </li>
-</ul>
+<h1>文件上传示例</h1>
+<input type="text" id="token" placeholder="Token"><br>
+<input type="text" id="title" placeholder="视频名字"><br>
+<input type="file" id="fileInput"><br>
+<button id="uploadButton">上传</button>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const uploadButton = document.getElementById("uploadButton");
+        uploadButton.addEventListener("click", handleUpload);
+    });
+
+    function handleUpload() {
+        const token = document.getElementById("token").value;
+        const title = document.getElementById("title").value;
+        const fileInput = document.getElementById("fileInput");
+
+        if (!token || !title || !fileInput.files[0]) {
+            alert("请填写所有必要信息！");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("token", token);
+        formData.append("title", title);
+        formData.append("data", fileInput.files[0]);
+
+        fetch("http://127.0.0.1:8080/douyin/publish/action/", {
+            method: "POST",
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data)
+                alert(data.status_msg);
+            })
+            .catch(error => {
+                console.error("上传失败：", error);
+            });
+    }
+
+</script>
 </body>
 </html>
