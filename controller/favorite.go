@@ -10,17 +10,15 @@ import (
 )
 
 type FavoriteListRequest struct {
-	Token  string `query:"token" validate:"required"`  // 用户鉴权token
-	UserID string `query:"user_id" validate:"required"`// 用户id
+	Token  string `query:"token" validate:"required"`   // 用户鉴权token
+	UserID string `query:"user_id" validate:"required"` // 用户id
 }
 
 type FavoriteActionRequest struct {
-	ActionType string `query:"action_type" validate:"required"`// 1-点赞，2-取消点赞
-	Token      string `query:"token" validate:"required"`      // 用户鉴权token
-	VideoID    string `query:"video_id" validate:"required"`   // 视频id
+	ActionType string `query:"action_type" validate:"required"` // 1-点赞，2-取消点赞
+	Token      string `query:"token" validate:"required"`       // 用户鉴权token
+	VideoID    string `query:"video_id" validate:"required"`    // 视频id
 }
-
-
 
 func FavoriteAction(c *fiber.Ctx) error {
 	request := new(FavoriteActionRequest)
@@ -33,17 +31,15 @@ func FavoriteAction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 2, StatusMsg: "request invalid " + err.Error()})
 	}
 	token := request.Token
-	claimPtr, err := service.ParseToken(token)
+	uid, err := service.GetUserID(token)
 	if err != nil {
-		fmt.Printf("token invalid: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 3, StatusMsg: "token invalid" + err.Error()})
+		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 3, StatusMsg: "get user id failed " + err.Error()})
 	}
-	uid := uint((*claimPtr).ID)
 	vid, _ := strconv.Atoi(request.VideoID)
 	// if _, err := service.GetUserById(uid); err != nil {
-		// 	fmt.Printf("user don't exist: %v\n", err)
-		// 	return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 2, StatusMsg: "User doesn't exist"})
-		// }
+	// 	fmt.Printf("user don't exist: %v\n", err)
+	// 	return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 2, StatusMsg: "User doesn't exist"})
+	// }
 	actionType := request.ActionType
 	if actionType == "1" {
 		// TODO: 已经点过赞的需要报错吗?
@@ -75,9 +71,8 @@ func FavoriteList(c *fiber.Ctx) error {
 	token := request.Token
 	if _, err := service.ParseToken(token); err != nil {
 		fmt.Printf("token invalid: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response:Response{StatusCode: 3, StatusMsg: "token invalid" + err.Error()}})
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 3, StatusMsg: "token invalid" + err.Error()}})
 	}
-
 
 	uid, _ := strconv.Atoi(request.UserID)
 	if _, err := service.GetUserById(uint(uid)); err != nil {

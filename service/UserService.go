@@ -6,6 +6,7 @@ import (
 	"douyin/models"
 	"douyin/public"
 	"douyin/utils/jwt"
+	"log"
 )
 
 func GetUserByName(userName string) (models.User, error) {
@@ -31,7 +32,7 @@ func GetUserById(ID uint) (models.User, error) {
 
 func GenerateToken(u *models.User) (string, error) {
 	// TODO: Add expired time to token claims
-	token, err := public.Jwt.CreateToken(jwt.CustomClaims{ID: int64((*u).ID)}); 
+	token, err := public.Jwt.CreateToken(jwt.CustomClaims{ID: int64((*u).ID)})
 	if err != nil {
 		return token, err
 	}
@@ -64,7 +65,7 @@ func GetUserInfoById(id uint) (models.UserInfo, error) {
 		return models.UserInfo{}, err
 	}
 	userInfo := GenerateUserInfo(&user)
-		return userInfo, nil
+	return userInfo, nil
 }
 
 func GetUsersByIds(uids []uint) ([]models.User, error) {
@@ -85,4 +86,13 @@ func GetUserInfosByIds(uids []uint) (map[uint]models.UserInfo, error) {
 		userInfoIdMap[u.ID] = GenerateUserInfo(&u)
 	}
 	return userInfoIdMap, nil
+}
+
+func GetUserID(token string) (uint, error) {
+	claims, err := ParseToken(token)
+	if err != nil {
+		log.Printf("token invalid: %v\n", err)
+		return 0, err
+	}
+	return uint(claims.ID), nil
 }

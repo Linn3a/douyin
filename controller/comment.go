@@ -43,12 +43,10 @@ func CommentAction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 2, StatusMsg: "request invalid " + err.Error()}})
 	}
 	token := request.Token
-	claimPtr, err := service.ParseToken(token)
+	uid, err := service.GetUserID(token)
 	if err != nil {
-		fmt.Printf("token invalid: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 3, StatusMsg: "token invalid"}}) //不加null写法
+		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 3, StatusMsg: "get user id failed"}})
 	}
-	uid := uint((*claimPtr).ID)
 	vid, _ := strconv.Atoi(request.VideoID)
 	// TODO: vid, uid不存在是否报错
 	// if _, err := service.GetUserById(uid); err != nil {
