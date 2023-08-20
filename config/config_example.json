@@ -18,6 +18,12 @@
       "log_mode": "info",
       "enable_file_log_writer": false,
       "log_filename": "sql.log"
+    },
+    "oss": {
+      "endpoint": "oss-cn-shanghai.aliyuncs.com",
+      "access_key_id": "access_key_id",
+      "access_key_secret": "access_key_secret",
+      "bucket_name": "bucket_name"
     }
   }
 }

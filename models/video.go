@@ -29,12 +29,12 @@ func NewVideoInfo(v *Video, ui *UserInfo,
 	favoriteCount int64, commentCount int64) VideoInfo {
 	return VideoInfo{
 		ID:            int64((*v).ID),
-		Author:        (*ui),
+		Author:        *ui,
 		PlayUrl:       (*v).PlayUrl,
 		CoverUrl:      (*v).CoverUrl,
 		FavoriteCount: favoriteCount,
 		CommentCount:  commentCount,
-		IsFavorite:    (favoriteCount > 0),
+		IsFavorite:    favoriteCount > 0,
 		Title:         (*v).Title,
 	}
 }

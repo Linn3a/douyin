@@ -46,7 +46,10 @@ func GetVideosByUserId(uid uint) ([]models.Video, error) {
 		err := models.DB.Model(&user).Association("CreatedVideo").Find(&videos)
 		return videos, err
 	}
+}
 
+func CreateVideo(video models.Video) error {
+	return models.DB.Create(&video).Error
 }
 
 // =============================================================================================================// =============================================================================================================// =============================================================================================================

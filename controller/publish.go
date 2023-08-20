@@ -2,11 +2,11 @@ package controller
 
 import (
 	"douyin/models"
+	"douyin/service"
 	"fmt"
-	"net/http"
-	"path/filepath"
-
 	"github.com/gofiber/fiber/v2"
+	"log"
+	"net/http"
 )
 
 type VideoListResponse struct {
@@ -16,12 +16,14 @@ type VideoListResponse struct {
 
 // Publish check token then save upload file to public directory
 func Publish(c *fiber.Ctx) error {
-	var token string
-	if err := c.BodyParser(&token); err != nil {
-		return err
-	}
-	if _, exist := usersLoginInfo[token]; !exist {
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
+	token := c.FormValue("token", "0")
+	userID, err := service.GetUserID(token)
+	if err != nil {
+		log.Printf("Get user id error:%v", err)
+		return c.Status(http.StatusOK).JSON(Response{
+			StatusCode: 1,
+			StatusMsg:  "Invalid token",
+		})
 	}
 
 	data, err := c.FormFile("data")
@@ -32,22 +34,38 @@ func Publish(c *fiber.Ctx) error {
 		})
 
 	}
-
-	filename := filepath.Base(data.Filename)
-	user := usersLoginInfo[token]
-	finalName := fmt.Sprintf("%d_%s", user.ID, filename)
-	saveFile := filepath.Join("./public/", finalName)
-	if err := c.SaveFile(data, saveFile); err != nil {
+	videoUrl, coverUrl, err := service.UploadVideoToOSS(data)
+	if err != nil {
 		return c.Status(http.StatusOK).JSON(Response{
 			StatusCode: 1,
 			StatusMsg:  err.Error(),
 		})
+	}
+	fmt.Printf("videoUrl:%v\n", videoUrl)
+	fmt.Printf("coverUrl:%v\n", coverUrl)
 
+	//println(data.Filename)
+	//filename := filepath.Base(data.Filename)
+
+	newVideo := models.Video{
+		Title:    c.FormValue("title", "title"),
+		PlayUrl:  videoUrl,
+		CoverUrl: coverUrl,
+		AuthorID: userID,
+	}
+
+	err = service.CreateVideo(newVideo)
+	if err != nil {
+		log.Printf("Mysql create video error:%v", err)
+		return c.Status(http.StatusOK).JSON(Response{
+			StatusCode: 1,
+			StatusMsg:  err.Error(),
+		})
 	}
 
 	return c.Status(http.StatusOK).JSON(Response{
 		StatusCode: 0,
-		StatusMsg:  finalName + " uploaded successfully",
+		StatusMsg:  "upload successfully",
 	})
 }
 
@@ -60,49 +78,3 @@ func PublishList(c *fiber.Ctx) error {
 		VideoList: []models.VideoInfo{},
 	})
 }
-
-//// Publish check token then save upload file to public directory
-//func Publish(c *gin.Context) {
-//	token := c.PostForm("token")
-//
-//	if _, exist := usersLoginInfo[token]; !exist {
-//		c.JSON(http.StatusOK, Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
-//		return
-//	}
-//
-//	data, err := c.FormFile("data")
-//	if err != nil {
-//		c.JSON(http.StatusOK, Response{
-//			StatusCode: 1,
-//			StatusMsg:  err.Error(),
-//		})
-//		return
-//	}
-//
-//	filename := filepath.Base(data.Filename)
-//	user := usersLoginInfo[token]
-//	finalName := fmt.Sprintf("%d_%s", user.Id, filename)
-//	saveFile := filepath.Join("./public/", finalName)
-//	if err := c.SaveUploadedFile(data, saveFile); err != nil {
-//		c.JSON(http.StatusOK, Response{
-//			StatusCode: 1,
-//			StatusMsg:  err.Error(),
-//		})
-//		return
-//	}
-//
-//	c.JSON(http.StatusOK, Response{
-//		StatusCode: 0,
-//		StatusMsg:  finalName + " uploaded successfully",
-//	})
-//}
-
-//// PublishList all users have same publish video list
-//func PublishList(c *gin.Context) {
-//	c.JSON(http.StatusOK, VideoListResponse{
-//		Response: Response{
-//			StatusCode: 0,
-//		},
-//		VideoList: DemoVideos,
-//	})
-//}
