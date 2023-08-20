@@ -65,7 +65,7 @@ func Publish(c *fiber.Ctx) error {
 
 	return c.Status(http.StatusOK).JSON(Response{
 		StatusCode: 0,
-		StatusMsg:  " uploaded successfully",
+		StatusMsg:  "upload successfully",
 	})
 }
 
