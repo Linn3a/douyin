@@ -2,6 +2,7 @@ package config
 
 type Database struct {
 	Mysql Mysql `mapstructure:"mysql" json:"mysql" yaml:"mysql"`
+	OSS   OSS   `mapstructure:"oss" json:"oss" yaml:"oss"`
 }
 
 type Mysql struct {
@@ -19,4 +20,10 @@ type Mysql struct {
 	LogFilename         string `mapstructure:"log_filename" json:"log_filename" yaml:"log_filename"`
 }
 
-// todo 对象数据库
+// OSS object database
+type OSS struct {
+	Endpoint        string `mapstructure:"endpoint" json:"endpoint" yaml:"endpoint"`
+	AccessKeyID     string `mapstructure:"access_key_id" json:"access_key_id" yaml:"access_key_id"`
+	AccessKeySecret string `mapstructure:"access_key_secret" json:"access_key_secret" yaml:"access_key_secret"`
+	BucketName      string `mapstructure:"bucket_name" json:"bucket_name" yaml:"bucket_name"`
+}
