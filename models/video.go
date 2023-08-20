@@ -15,26 +15,26 @@ type Video struct {
 }
 
 type VideoInfo struct {
-	ID            int64
-	Author        UserInfo
-	PlayUrl       string
-	CoverUrl      string
-	FavoriteCount int64
-	CommentCount  int64
-	IsFavorite    bool
-	Title         string
+	ID            int64    `json:"id"`
+	Author        UserInfo `json:"author"`
+	PlayUrl       string   `json:"play_url"`
+	CoverUrl      string   `json:"cover_url"`
+	FavoriteCount int64    `json:"favorite_count"`
+	CommentCount  int64    `json:"comment_count"`
+	IsFavorite    bool     `json:"is_favorite"`
+	Title         string   `json:"title"`
 }
 
 func NewVideoInfo(v *Video, ui *UserInfo,
 	favoriteCount int64, commentCount int64) VideoInfo {
 	return VideoInfo{
 		ID:            int64((*v).ID),
-		Author:        (*ui),
+		Author:        *ui,
 		PlayUrl:       (*v).PlayUrl,
 		CoverUrl:      (*v).CoverUrl,
 		FavoriteCount: favoriteCount,
 		CommentCount:  commentCount,
-		IsFavorite:    (favoriteCount > 0),
+		IsFavorite:    favoriteCount > 0,
 		Title:         (*v).Title,
 	}
 }
