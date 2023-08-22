@@ -8,9 +8,11 @@ import (
 	"douyin/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"douyin/middleware/rabbitmq"
 )
 
 func Init() (*fiber.App, error) {
+
 	err := config.InitConfig()
 	if err != nil {
 		return nil, err
@@ -20,6 +22,10 @@ func Init() (*fiber.App, error) {
 		return nil, err
 	}
 	err = service.InitOSS()
+	if err != nil {
+		return nil, err
+	}
+	err = rabbitmq.InitRabbitMQ()
 	if err != nil {
 		return nil, err
 	}

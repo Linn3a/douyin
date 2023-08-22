@@ -2,9 +2,12 @@ package service
 
 import (
 	"douyin/models"
-	"errors"
-	"gorm.io/gorm"
+	// "errors"
+	// "gorm.io/gorm"
 	"fmt"
+	"strings"
+	"strconv"
+	"douyin/middleware/rabbitmq"
 )
 
 const USER_TABLE_NAME = "users"
@@ -12,46 +15,27 @@ const RELATION_TABLE_NAME = "user_follows"
 
 // FollowAction 关注操作
 func FollowAction(fromId uint, toId uint) error {
-		//判断关注是否存在
-		if HasRelation(fromId, toId) {
-			//关注存在
-			return errors.New("关注已存在")
-		} else {
-			//关注不存在,创建关注(启用事务Transaction)
-			err1 := models.DB.Transaction(func(db *gorm.DB) error {
-				// from 关注 to，from 成为 to 的粉丝
-				err := CreateRelation(fromId, toId)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-			if err1 != nil {
-				return err1
-			}
-		}
+	// 关注消息加入消息队列
+	sb := strings.Builder{}
+	sb.WriteString(strconv.Itoa(int(fromId)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(toId)))
+	rabbitmq.RmqFollowAdd.Publish(sb.String())
+	fmt.Println("关注消息入队成功")
 	return nil
 }
 
 
 func CancleAction(fromId uint,toId uint)error{
-//判断关注是否存在
-		if HasRelation(fromId, toId) {
-			//关注存在,删除关注(启用事务Transaction)
-			if err1 := models.DB.Transaction(func(db *gorm.DB) error {
-				err := DeleteRelation(fromId, toId)
-				if err != nil {
-					return err
-				}
-				return nil
-			}); err1 != nil {
-				return err1
-			}else{
-				return nil
-			}
-		} 
-		//关注不存在
-		return errors.New("关注不存在")
+	// 取关消息加入消息列表
+	sb := strings.Builder{}
+	sb.WriteString(strconv.Itoa(int(fromId)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(toId)))
+	rabbitmq.RmqFollowDel.Publish(sb.String())
+	// 记录日志
+	fmt.Println("取关消息入队成功")
+	return nil
 		
 }
 
@@ -150,7 +134,7 @@ func FriendList(Id uint) ([]models.UserInfo, error) {
 	// 检查 粉丝列表中的用户是否Id也关注 
 	followerList, err := FollowerList(Id)
 	if err != nil {
-		return nil, err
+		return friendList, err
 	} else {
 		for _, userInfo := range followerList {
 			if userInfo.IsFollow {
