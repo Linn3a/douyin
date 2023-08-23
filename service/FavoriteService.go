@@ -2,7 +2,51 @@ package service
 
 import (
 	"douyin/models"
+	"fmt"
+	"strconv"
 )
+
+// redis 关系查询优化
+
+func IsVideoFavorited(uid uint, v *models.VideoInfo) error {
+	isFavorite, err := models.RedisClient.SIsMember(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(v.ID)), uid).Result()
+	if err != nil {
+		return fmt.Errorf("user favorite set check error: %v", err)
+	}
+	v.IsFavorite = isFavorite
+	return nil
+}
+
+func GetVideoFavoriteCount(v *models.VideoInfo) error {
+	favoriteCount, err := models.RedisClient.SCard(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(v.ID))).Result()
+	if err != nil {
+		return fmt.Errorf("video favorited set count error: %v", err)
+	}
+	v.FavoriteCount = favoriteCount
+	return nil
+}
+
+func GetUserFavoriteCount(u *models.UserInfo) error {
+	favoriteCount, err := models.RedisClient.SCard(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(u.ID))).Result()
+	if err != nil {
+		return fmt.Errorf("user favorited set count error: %v", err)
+	}
+	u.FavoriteCount = favoriteCount
+	return nil
+}
+
+func GetUserTotalFavorited(u *models.UserInfo) error {
+	totFavorited, err := models.RedisClient.Get(ctx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(u.ID))).Result()
+	if err != nil {
+		return fmt.Errorf("user tot favorited get error: %v", err)
+	}
+	numTotFavorited, _ := strconv.Atoi(totFavorited)
+	u.TotalFavorited = int64(numTotFavorited)
+	return nil
+}
+
+//---------------------------------
+
 
 // audience2video
 func AddFavoriteVideo(uid uint, vid uint) error {

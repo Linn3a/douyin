@@ -16,7 +16,7 @@ type Video struct {
 
 type VideoInfo struct {
 	ID            int64    `json:"id"`
-	Author        UserInfo `json:"author"`
+	Author        *UserInfo `json:"author"`
 	PlayUrl       string   `json:"play_url"`
 	CoverUrl      string   `json:"cover_url"`
 	FavoriteCount int64    `json:"favorite_count"`
@@ -25,16 +25,15 @@ type VideoInfo struct {
 	Title         string   `json:"title"`
 }
 
-func NewVideoInfo(v *Video, ui *UserInfo,
-	favoriteCount int64, commentCount int64) VideoInfo {
+func NewVideoInfo(v *Video) VideoInfo {
 	return VideoInfo{
 		ID:            int64((*v).ID),
-		Author:        *ui,
+		Author:        nil,
 		PlayUrl:       (*v).PlayUrl,
 		CoverUrl:      (*v).CoverUrl,
-		FavoriteCount: favoriteCount,
-		CommentCount:  commentCount,
-		IsFavorite:    favoriteCount > 0,
+		FavoriteCount: 0,
+		CommentCount:  0,
+		IsFavorite:    false,
 		Title:         (*v).Title,
 	}
 }

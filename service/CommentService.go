@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+
 func CreateComment(newComment *models.Comment) error {
 	err := models.DB.Create(newComment).Error
 	return err
@@ -21,12 +22,12 @@ func GetCommentsByVideoId(vid uint) ([]models.Comment, error) {
 	return comments, err
 }
 
-func CountCommentsByVideoId(vid uint) (int64, error) {
-	comments := []models.Comment{}
-	err := models.DB.Where("video_id=?", vid).Find(&comments).Error
-	counts := int64(len(comments))
-	return counts, err
-}
+// func CountCommentsByVideoId(vid uint) (int64, error) {
+// 	comments := []models.Comment{}
+// 	err := models.DB.Where("video_id=?", vid).Find(&comments).Error
+// 	counts := int64(len(comments))
+// 	return counts, err
+// }
 
 func CountCommentsByVideoIds(vids []uint) (map[uint]int64, error) {
 	var queryResults []map[string]interface{}

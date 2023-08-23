@@ -49,13 +49,12 @@ func ParseToken(token string) (*jwt.CustomClaims, error) {
 }
 
 func GenerateUserInfo(u *models.User) models.UserInfo {
-	// TODO: add info for other field
-	//	e.g. total_favorite, work_count,etc.
 	userInfo := models.NewUserInfo(u)
-	userInfo.FollowCount, _ = GetFollowCnt(u.ID)
-	userInfo.FollowerCount, _ = GetFollowerCnt(u.ID)
-	userInfo.FavoriteCount, _ = CountUserFavorited(u.ID)
-	userInfo.TotalFavorited, _ = CountUserFavorited(u.ID)
+	GetUserFollowCount(&userInfo)
+	GetUserFollowerCount(&userInfo)
+	// IsUserFollowed(curId, &userInfo)
+	GetUserFavoriteCount(&userInfo)
+	GetUserTotalFavorited(&userInfo)
 	return userInfo
 }
 

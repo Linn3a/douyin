@@ -3,12 +3,51 @@ package service
 import (
 	"douyin/models"
 	"errors"
-	"gorm.io/gorm"
 	"fmt"
+	"strconv"
+
+	"gorm.io/gorm"
 )
 
 const USER_TABLE_NAME = "users"
 const RELATION_TABLE_NAME = "user_follows"
+
+
+// redis 查询优化
+
+
+
+func IsUserFollowed(uid uint, u *models.UserInfo) error {
+	isFollowed, err := models.RedisClient.SIsMember(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(uid)), u.ID).Result()
+	if err != nil {
+		return fmt.Errorf("social following set check error: %v", err)
+	}
+	u.IsFollow = isFollowed
+	return nil
+}
+
+func GetUserFollowCount(u *models.UserInfo) error {
+	followCount, err := models.RedisClient.SCard(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(u.ID))).Result()
+	if err != nil {
+		return fmt.Errorf("social following set check error: %v", err)
+
+	}
+	u.FollowCount = followCount
+	return nil
+}
+
+func GetUserFollowerCount(u *models.UserInfo) error {
+	followerCount, err := models.RedisClient.SCard(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(u.ID))).Result()
+	if err != nil {
+		return fmt.Errorf("social following set check error: %v", err)
+	}
+	u.FollowerCount = followerCount
+	return nil
+}
+
+//---------------------------------
+
+
 
 // FollowAction 关注操作
 func FollowAction(fromId uint, toId uint) error {

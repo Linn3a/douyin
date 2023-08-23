@@ -11,16 +11,19 @@ import (
 )
 
 func Init() (*fiber.App, error) {
-	err := config.InitConfig()
-	if err != nil {
+	if err := config.InitConfig(); err != nil {
 		return nil, err
 	}
-	err = models.InitDB()
-	if err != nil {
+	if err := models.InitDB(); err != nil {
 		return nil, err
 	}
-	err = service.InitOSS()
-	if err != nil {
+	if err := models.InitRedis(); err != nil {
+		return nil, err
+	}
+	if err := service.InitOSS(); err != nil {
+		return nil, err
+	}
+	if err := service.Init2Redis(); err != nil {
 		return nil, err
 	}
 	public.InitJWT()
@@ -37,5 +40,5 @@ func Init() (*fiber.App, error) {
 		//	AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 
-	return app, err
+	return app, nil
 }

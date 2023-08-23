@@ -3,6 +3,7 @@ package service
 import (
 	"douyin/models"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -23,6 +24,33 @@ type QueryFeedVideoListFlow struct {
 	nextTime   int64
 	feedVideo  *FeedVideoList
 }
+
+// redis 缓存查询
+
+
+func GetVideoCommentCount(v *models.VideoInfo) error {
+	commentCount, err := models.RedisClient.LLen(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(v.ID))).Result()
+	if err != nil {
+		return fmt.Errorf("comment list count error: %v", err)
+	}
+	v.CommentCount = commentCount
+	return nil
+}
+
+// ----------------------------------
+
+func GenerateVideoInfo(curId uint, v *models.Video) {
+
+}
+
+func GetVideoInfoById(curId uint, vid uint) {
+
+}
+
+func GetVideoInfoByIds(curId uint, vids []uint) {
+
+}
+
 
 // =============================================================================================================
 
