@@ -3,16 +3,28 @@ package service
 import (
 	"douyin/models"
 	"fmt"
+	"strings"
+	"strconv"
+	"douyin/middleware/rabbitmq"
 )
 
 func CreateComment(newComment *models.Comment) error {
-	err := models.DB.Create(newComment).Error
-	return err
+	// 关注消息加入消息队列
+	sb := strings.Builder{}
+	sb.WriteString(newComment.Content)
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(newComment.UserId)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(newComment.VideoId)))
+	rabbitmq.RmqCommentAdd.Publish(sb.String())
+	fmt.Println("评论消息入队成功")
+	return nil
 }
 
 func DeleteComment(id uint) error {
-	err := models.DB.Delete(&models.Comment{}, id).Error
-	return err
+	rabbitmq.RmqCommentDel.Publish(strconv.FormatInt(int64(id),10))
+	fmt.Println("删除评论消息入队成功")
+	return nil
 }
 
 func GetCommentsByVideoId(vid uint) ([]models.Comment, error) {
