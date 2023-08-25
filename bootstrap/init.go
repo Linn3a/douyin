@@ -8,10 +8,12 @@ import (
 	"douyin/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"douyin/middleware/rabbitmq"
 )
 
 func Init() (*fiber.App, error) {
-	if err := config.InitConfig(); err != nil {
+	err := config.InitConfig()
+	if err != nil {
 		return nil, err
 	}
 	if err := models.InitDB(); err != nil {
@@ -24,6 +26,10 @@ func Init() (*fiber.App, error) {
 		return nil, err
 	}
 	if err := service.Init2Redis(); err != nil {
+		return nil, err
+	}
+	err = rabbitmq.InitRabbitMQ()
+	if err != nil {
 		return nil, err
 	}
 	public.InitJWT()

@@ -25,5 +25,11 @@
       "access_key_secret": "access_key_secret",
       "bucket_name": "bucket_name"
     }
+  },
+  "rabbitmq":{
+    "host":"127.0.0.1",
+    "port":5672,
+    "username":"guest",
+    "password":"guest"
   }
 }

@@ -4,9 +4,10 @@ import (
 	"douyin/models"
 	"douyin/service"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
 	"log"
 	"net/http"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type VideoListResponse struct {
@@ -71,10 +72,52 @@ func Publish(c *fiber.Ctx) error {
 
 // PublishList all users have same publish video list
 func PublishList(c *fiber.Ctx) error {
+	token := c.FormValue("token", "0")
+	userID, err := service.GetUserID(token)
+	if err != nil {
+		log.Printf("Get user id error:%v", err)
+		return c.Status(http.StatusOK).JSON(Response{
+			StatusCode: 1,
+			StatusMsg:  "Invalid token",
+		})
+	}
+	videos, err := service.GetVideosByUserId(userID)
+	if err != nil {
+		return err
+	}
+	authorIds := make([]uint, len(videos))
+	videoIds := make([]uint, len(videos))
+	for ind, video := range videos {
+		authorIds[ind] = video.AuthorID
+		videoIds[ind] = video.ID
+	}
+	userInfos, err := service.GetUserInfosByIds(authorIds)
+	if err != nil {
+		fmt.Printf("userInfos get error: %v\n", err)
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 6, StatusMsg: "videos get error" + err.Error()}})
+	}
+	favoriteCounts, err := service.CountFavoritedUsersByIds(videoIds)
+	if err != nil {
+		fmt.Printf("favorite counts get error: %v\n", err)
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 7, StatusMsg: "favorite counts get error" + err.Error()}})
+	}
+	commentCounts, err := service.CountCommentsByVideoIds(videoIds)
+	if err != nil {
+		fmt.Printf("comment counts get error: %v\n", err)
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 8, StatusMsg: "comment counts get error" + err.Error()}})
+	}
+	videoInfos := make([]models.VideoInfo, len(videos))
+	for ind, video := range videos {
+		userInfo := userInfos[video.AuthorID]
+		favoriteCount := favoriteCounts[video.ID]
+		commentCount := commentCounts[video.ID]
+		videoInfos[ind] = models.NewVideoInfo(&video, &userInfo, favoriteCount, commentCount)
+	}
 	return c.Status(http.StatusOK).JSON(VideoListResponse{
 		Response: Response{
 			StatusCode: 0,
+			StatusMsg:  "upload successfully",
 		},
-		VideoList: []models.VideoInfo{},
+		VideoList: videoInfos,
 	})
 }

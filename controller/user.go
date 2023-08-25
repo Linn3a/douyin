@@ -50,6 +50,8 @@ func Register(c *fiber.Ctx) error {
 				StatusCode: 1,
 				StatusMsg:  "User already exist",
 			},
+			UserId: 1,
+			Token:  "",
 		})
 	}
 
@@ -65,6 +67,8 @@ func Register(c *fiber.Ctx) error {
 				StatusCode: 2,
 				StatusMsg:  "User insertion error",
 			},
+			UserId: int64(newUser.ID),
+			Token:  "",
 		})
 	}
 
@@ -87,6 +91,7 @@ func Register(c *fiber.Ctx) error {
 			StatusMsg:  "Unable to create token",
 		},
 		UserId: int64(newUser.ID),
+		Token:  "",
 	})
 }
 
@@ -102,6 +107,8 @@ func Login(c *fiber.Ctx) error {
 				StatusCode: 1,
 				StatusMsg:  "User doesn't exist",
 			},
+			UserId: 1,
+			Token:  "",
 		})
 	}
 
@@ -111,6 +118,8 @@ func Login(c *fiber.Ctx) error {
 				StatusCode: 2,
 				StatusMsg:  "Password doesn't match",
 			},
+			UserId: 1,
+			Token:  "",
 		})
 	}
 
@@ -130,6 +139,8 @@ func Login(c *fiber.Ctx) error {
 			StatusCode: 2,
 			StatusMsg:  "Unable to create token",
 		},
+		UserId: 1,
+		Token:  "",
 	})
 }
 

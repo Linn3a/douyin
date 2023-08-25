@@ -2,8 +2,10 @@ package service
 
 import (
 	"douyin/models"
-	"fmt"
+	"strings"
 	"strconv"
+	"douyin/middleware/rabbitmq"
+	"fmt"
 )
 
 // redis 关系查询优化
@@ -50,6 +52,14 @@ func GetUserTotalFavorited(u *models.UserInfo) error {
 
 // audience2video
 func AddFavoriteVideo(uid uint, vid uint) error {
+	// like消息加入消息队列
+	sb := strings.Builder{}
+	sb.WriteString(strconv.Itoa(int(uid)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(vid)))
+	rabbitmq.RmqLikeAdd.Publish(sb.String())
+	fmt.Println("like消息入队成功")
+	return nil
 	// user, err := GetUserById(uid)
 	// if err != nil {
 	// 	return fmt.Errorf("user not found: %v", err)
@@ -58,16 +68,24 @@ func AddFavoriteVideo(uid uint, vid uint) error {
 	// if err != nil {
 	// 	return fmt.Errorf("video not found: %v", err)
 	// }
-	user := models.User{}
-	user.ID = uid
-	video := models.Video{}
-	video.ID = vid
-	err := models.DB.Model(&user).Association("LikeVideo").Append(&video)
-	return err
+	// user := models.User{}
+	// user.ID = uid
+	// video := models.Video{}
+	// video.ID = vid
+	// err := models.DB.Model(&user).Association("LikeVideo").Append(&video)
+	// return err
 }
 
 // audience2video
 func DeleteFavoriteVideo(uid uint, vid uint) error {
+	// like取消消息加入消息队列
+	sb := strings.Builder{}
+	sb.WriteString(strconv.Itoa(int(uid)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(vid)))
+	rabbitmq.RmqLikeDel.Publish(sb.String())
+	fmt.Println("like取消消息入队成功")
+	return nil
 	// user, err := GetUserById(uid)
 	// if err != nil {
 	// 	return fmt.Errorf("user not found: %v", err)
@@ -76,12 +94,12 @@ func DeleteFavoriteVideo(uid uint, vid uint) error {
 	// if err != nil {
 	// 	return fmt.Errorf("video not found: %v", err)
 	// }
-	user := models.User{}
-	user.ID = uid
-	video := models.Video{}
-	video.ID = vid
-	err := models.DB.Model(&user).Association("LikeVideo").Delete(video)
-	return err
+	// user := models.User{}
+	// user.ID = uid
+	// video := models.Video{}
+	// video.ID = vid
+	// err := models.DB.Model(&user).Association("LikeVideo").Delete(video)
+	// return err
 }
 
 // audience2video
