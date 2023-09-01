@@ -31,5 +31,13 @@
     "port":5672,
     "username":"guest",
     "password":"guest"
+  },
+  "redis": {
+    "address": "127.0.0.1:6379",
+    "password": "123456",
+    "db": 0,
+    "read_timeout": 2,
+    "write_timeout": 2,
+    "pool_timeout": 3
   }
 }

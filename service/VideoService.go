@@ -2,8 +2,8 @@ package service
 
 import (
 	"douyin/models"
+	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -12,8 +12,8 @@ import (
 const (
 	MaxVideoNum = 30
 )
-// redis 缓存查询
 
+// redis 缓存查询
 func GetUserWorkCount(u *models.UserInfo) error {
 	count, err := models.RedisClient.SCard(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(u.ID))).Result()
 	if err != nil {
@@ -53,57 +53,79 @@ func GenerateVideoInfo(v *models.Video) models.VideoInfo {
 
 func GetVideoInfoById(vid uint) (models.VideoInfo, error) {
 	video, err := GetVideoById(vid)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return models.VideoInfo{}, err
+	}
 	videoInfo := GenerateVideoInfo(&video)
-	authorInfo, err := GetUserInfoById(video.AuthorID)
-	err = GetVideoFavoriteCount(&videoInfo)
-	err = GetVideoCommentCount(&videoInfo)
+	authorInfo, err := GetUserInfoById(video.AuthorID) 
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return models.VideoInfo{}, err
+	}
+	if err := GetVideoFavoriteCount(&videoInfo); err != nil {
+		fmt.Printf("%v\n", err)
+		return models.VideoInfo{}, err
+	}
+	if err = GetVideoCommentCount(&videoInfo); err != nil {
+		fmt.Printf("%v\n", err)
+		return models.VideoInfo{}, err
+	}
 	videoInfo.Author = &authorInfo
-	return videoInfo, err
+	return videoInfo, nil
 }
 
 func GetVideoInfosByIds(vids []uint) ([]models.VideoInfo, error) {
-	videos, err := GetVideosByIds(vids)
 	videoInfos := make([]models.VideoInfo, len(vids))
+	videos, err := GetVideosByIds(vids)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return videoInfos, err
+	}
 	authorIds := make([]uint, len(vids))
 
 	for ind, video := range videos {
 		authorIds[ind] = video.AuthorID
 		videoInfos[ind] = GenerateVideoInfo(&video)
 	}
-	authorInfos, err := GetUserInfosByIds(authorIds)
+	authorInfos, err := GetUserInfoMapByIds(authorIds)
+	if err != nil {
+		return videoInfos, err
+	}
 
-	for i, videoInfo := range videoInfos {
-		err = GetVideoFavoriteCount(&videoInfos[i])
-		err = GetVideoCommentCount(&videoInfos[i])
-		authorInfo := authorInfos[uint(videoInfo.ID)]
+	for i := 0; i < len(videoInfos); i++ {
+		if err := GetVideoFavoriteCount(&videoInfos[i]); err != nil {
+			fmt.Printf("%v\n", err)
+			return videoInfos, err
+		}
+		if err := GetVideoCommentCount(&videoInfos[i]); err != nil {
+			fmt.Printf("%v\n", err)
+			return videoInfos, err
+		}
+		authorInfo := authorInfos[videos[i].AuthorID]
 		videoInfos[i].Author = &authorInfo
 	}
-	return videoInfos, err
+	return videoInfos, nil
 }
 
-func GetFeedVideoIds(latest_time int64) ([]uint, error) {
-	var maxTime int64
-	if latest_time == 0 {
-		maxTime = time.Now().Unix()
-	} else {
-		maxTime = latest_time
-	}
-	
-	strVids, err := models.RedisClient.ZRevRangeByScore(RedisCtx, BASIC_RECENT_PUBLISH_KEY, &redis.ZRangeBy{
-		Min: "0",
-		Max: strconv.FormatInt(maxTime, 10),
+func GetFeedVideoIds(latest_time *int64) ([]uint, error) {
+
+	zVids, err := models.RedisClient.ZRevRangeByScoreWithScores(RedisCtx, BASIC_RECENT_PUBLISH_KEY, &redis.ZRangeBy{
+		Min:   "0",
+		Max:   strconv.FormatInt(*latest_time, 10),
 		Count: MaxVideoNum,
 	}).Result()
 	if err != nil {
 		return []uint{}, err
 	}
-	vids := make([]uint, len(strVids))
-	for i, strVid := range strVids {
-		tmp, _ := strconv.Atoi(strVid)
-		vids[i] = uint(tmp)
+	*latest_time = int64(zVids[len(zVids)-1].Score)
+	vids := make([]uint, len(zVids))
+	for i, zVid := range zVids {
+		tmp, _ := zVid.Member.(uint)
+		vids[i] = tmp
 	}
 	return vids, nil
-} 
+}
 
 // =============================================================================================================
 
@@ -115,7 +137,7 @@ func GetVideoById(vid uint) (models.Video, error) {
 
 func GetVideosByIds(vids []uint) ([]models.Video, error) {
 	videos := make([]models.Video, len(vids))
-	err := models.DB.Where("vid in ?", vids).Find(&videos).Error
+	err := models.DB.Where("id in ?", vids).Find(&videos).Error
 	return videos, err
 }
 func GetVideosByUpdateAt() ([]models.Video, error) {
@@ -145,13 +167,13 @@ func GetVideosLenght() (int64, error) {
 
 func CreateVideo(title string, playUrl string, coverUrl string, uid uint) error {
 	video := models.Video{
-		Title: title,
-		PlayUrl: playUrl,
+		Title:    title,
+		PlayUrl:  playUrl,
 		CoverUrl: coverUrl,
 		AuthorID: uid,
 	}
 	err := models.DB.Create(&video).Error
 	models.RedisClient.SAdd(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(uid)), video.ID)
-	models.RedisClient.ZAdd(RedisCtx, BASIC_RECENT_PUBLISH_KEY, &redis.Z{Score: float64(video.CreatedAt.Unix()), Member: video.ID})
+	models.RedisClient.ZAdd(RedisCtx, BASIC_RECENT_PUBLISH_KEY, &redis.Z{Score: float64(video.CreatedAt.UnixMilli()), Member: video.ID})
 	return err
 }

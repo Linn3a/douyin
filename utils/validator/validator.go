@@ -22,26 +22,26 @@ func New() customValidator {
 	return customValidator{validate}
 }
 
-func (v customValidator)ValidateQuery(c *fiber.Ctx, resp BaseResponse, request interface{}) error {
+func (v customValidator)ValidateQuery(c *fiber.Ctx, resp BaseResponse, request interface{}) (error, error) {
 	if err := c.QueryParser(request); err != nil {
 		fmt.Printf("request type wrong: %v\n", err)
-		resp.Set(1, "request type wrong")
-		return c.Status(fiber.StatusOK).JSON(resp)
+		resp.Set(1, "request type wrong "+err.Error())
+		return fmt.Errorf("request type wrong: %v", err), c.Status(fiber.StatusOK).JSON(resp)
 	}
 	// 测试非空等限制
 	if err := v.Struct(request); err != nil {
 		fmt.Printf("request invalid: %v\n", err)
-		resp.Set(2, "request invalid")
-		return c.Status(fiber.StatusOK).JSON(resp)
+		resp.Set(2, "request invalid "+err.Error())
+		return fmt.Errorf("request invalid: %v", err), c.Status(fiber.StatusOK).JSON(resp)
 	}
-	return nil
+	return nil, nil
 }
 
-func (v customValidator)ValidateStruct(c *fiber.Ctx, resp BaseResponse, request interface{}) error {
+func (v customValidator)ValidateStruct(c *fiber.Ctx, resp BaseResponse, request interface{}) (error, error) {
 	if err := v.Struct(request); err != nil {
 		fmt.Printf("request invalid: %v\n", err)
-		resp.Set(2, "request invalid")
-		return c.Status(fiber.StatusOK).JSON(resp)
+		resp.Set(2, "request invalid "+err.Error())
+		return fmt.Errorf("request invalid: %v", err), c.Status(fiber.StatusOK).JSON(resp)
 	}
-	return nil
+	return nil, nil
 }

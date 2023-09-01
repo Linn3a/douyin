@@ -1,12 +1,14 @@
 package rabbitmq
 
 import (
-	"github.com/streadway/amqp"
-	"log"
-	"fmt"
-	"strings"
-	"strconv"
 	"douyin/models"
+	"fmt"
+	"log"
+	"strconv"
+	"strings"
+
+	"github.com/streadway/amqp"
+	"gorm.io/gorm"
 )
 
 type CommentMQ struct {
@@ -113,11 +115,15 @@ func (l *CommentMQ) consumerCommentAdd(messages <-chan amqp.Delivery) {
 	for d := range messages {
 		// 参数解析。
 		params := strings.Split(fmt.Sprintf("%s", d.Body), " ")
-		text := params[0]
-		userId, _ := strconv.Atoi(params[1])
-		videoId, _ := strconv.Atoi(params[2])
+		Id, _ := strconv.Atoi(params[0])
+		text := params[1]
+		userId, _ := strconv.Atoi(params[2])
+		videoId, _ := strconv.Atoi(params[3])
 
 		comment := models.Comment{
+			Model: gorm.Model{
+				ID: uint(Id),
+			},
 			UserId:  uint(userId),
 			VideoId: uint(videoId),
 			Content: text,

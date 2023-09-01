@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"douyin/models"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -12,23 +13,32 @@ import (
 // redis初始化和redis更新使用的函数
 
 const (
+	// 加速关系查询
 	INTERACT_USER_FAVORITE_KEY     = "interact:favorite_videos:"
 	INTERACT_VIDEO_FAVORITE_KEY    = "interact:favorited_by:"
 	INTERACT_USER_TOT_FAVORITE_KEY = "interact:total_favorited:"
 	SOCIAL_FOLLOWING_KEY           = "social:has_following:"
 	SOCIAL_FOLLOWER_KEY            = "social:has_followers:"
-	INTERACT_COMMENT_KEY           = "interact:has_comments:"
-	BASIC_PUBLISH_KEY              = "basic:publish_works:"
-	BASIC_RECENT_PUBLISH_KEY       = "basic:recent_publish:"
+	// 加速总数统计
+	INTERACT_COMMENT_KEY     = "interact:has_comments:"
+	INTERACT_MAX_COMMENT_KEY = "interact:max_comment_id:"
+	// 加速总数统计
+	BASIC_PUBLISH_KEY = "basic:publish_works:"
+	// 加速排序
+	SOCIAL_MESSAGE_KEY = "social:messages:"
+	// 加速排序
+	BASIC_RECENT_PUBLISH_KEY = "basic:recent_publish:"
 )
 
-var RedisCtx = context.Background()
+var RedisCtx context.Context
 
 func Init2Redis() error {
+	RedisCtx = context.Background()
 	InitFavorite2Redis()
 	InitFollow2Redis()
 	InitComment2Redis()
 	InitPublish2Redis()
+	InitMessages2Redis()
 	return nil
 }
 
@@ -36,15 +46,16 @@ func Init2Redis() error {
 func InitFavorite2Redis() {
 	// 遍历favorite数据库
 	var favorites []models.Favorite
-	models.DB.Find(&favorites)
+	models.DB.Table("video_likes").Joins("join videos on videos.id = video_likes.video_id").Scan(&favorites)
 	for _, f := range favorites {
 		// 取出uid，vid
 		uid := f.UserId
 		vid := f.VideoId
+		aid := f.AuthorId
 		// 更新三个key的内容
 		models.RedisClient.SAdd(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid)
 		models.RedisClient.SAdd(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid)
-		models.RedisClient.Incr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid)))
+		models.RedisClient.Incr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(aid)))
 	}
 }
 
@@ -52,7 +63,7 @@ func InitFavorite2Redis() {
 func InitFollow2Redis() {
 	// 遍历relation表
 	var relations []models.Relation
-	models.DB.Find(&relations)
+	models.DB.Table("user_follows").Find(&relations)
 	for _, r := range relations {
 		// 取出fromid, toid
 		fromId := r.FollowerId
@@ -64,40 +75,67 @@ func InitFollow2Redis() {
 
 }
 
-type commentRelation struct {
-	cid uint
-	vid uint
+type CommentRelation struct {
+	ID      uint `json:"id"`
+	VideoID uint `json:"video_id"`
 }
 
 // 可以迁移到comment service
 func InitComment2Redis() {
 	// 遍历comment表
-	var commentRelations []commentRelation
+	var commentRelations []CommentRelation
 	models.DB.Model(&models.Comment{}).Find(&commentRelations)
+	maxCid := uint(0)
 	for _, r := range commentRelations {
 		// 取出vid
-		vid := r.vid
-		cid := r.cid
+		vid := r.VideoID
+		cid := r.ID
+		// panic(cid)
+		fmt.Println(cid)
+		if cid > maxCid {
+			maxCid = cid
+		}
 		// 更新一个key的内容
 		models.RedisClient.SAdd(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(vid)), cid)
 	}
+	models.RedisClient.Set(RedisCtx, INTERACT_MAX_COMMENT_KEY, maxCid, 0)
 }
 
 type publishRelation struct {
-	uid       uint
-	vid       uint
-	createdAt time.Time
+	AuthorID  uint
+	ID        uint
+	CreatedAt time.Time
 }
 
 func InitPublish2Redis() {
 	var publishRelations []publishRelation
 	models.DB.Model(&models.Video{}).Find(&publishRelations)
 	for _, r := range publishRelations {
-		uid := r.uid
-		vid := r.vid
-		ctime := r.createdAt
+		uid := r.AuthorID
+		vid := r.ID
+		ctime := r.CreatedAt
 		models.RedisClient.SAdd(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(uid)), vid)
-		models.RedisClient.ZAdd(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(uid)), &redis.Z{Score: float64(ctime.Unix()), Member: vid})
+		models.RedisClient.ZAdd(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(uid)), &redis.Z{Score: float64(ctime.UnixMilli()), Member: vid})
+	}
+}
+
+type messageRelation struct {
+	ID         uint
+	FromUserID uint
+	ToUserID   uint
+	CreatedAt  time.Time
+}
+
+func InitMessages2Redis() {
+	var messageRelations []messageRelation
+	models.DB.Model(&models.Message{}).Find(&messageRelations)
+	for _, r := range messageRelations {
+		mid := r.ID
+		fromid := r.FromUserID
+		toid := r.ToUserID
+		ctime := r.CreatedAt
+		key := GenerateMessageKey(fromid, toid)
+		models.RedisClient.ZAdd(RedisCtx, SOCIAL_MESSAGE_KEY+key, &redis.Z{Score: float64(ctime.UnixMilli()), Member: mid})
 	}
 }
 

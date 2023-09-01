@@ -92,7 +92,7 @@ func GetUserInfoById(id uint) (models.UserInfo, error) {
 	return userInfo, nil
 }
 
-func GetUserInfosByIds(ids []uint) (map[uint]models.UserInfo, error) {
+func GetUserInfoMapByIds(ids []uint) (map[uint]models.UserInfo, error) {
 	tmp := make(map[uint]models.UserInfo, len(ids))
 	users, err := GetUsersByIds(ids)
 	if err != nil {
@@ -121,6 +121,39 @@ func GetUserInfosByIds(ids []uint) (map[uint]models.UserInfo, error) {
 			return tmp, err
 		}
 		tmp[user.ID] = tmpInfo
+	}
+	return tmp, nil
+}
+
+func GetUserInfosByIds(ids []uint) ([]models.UserInfo, error) {
+	tmp := make([]models.UserInfo, len(ids))
+	users, err := GetUsersByIds(ids)
+	if err != nil {
+		return tmp, err
+	}
+	for i, user := range users {
+		tmpInfo := GenerateUserInfo(&user)
+		err = GetUserFollowCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserFollowerCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserTotalFavorited(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserWorkCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserFavoriteCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		tmp[i] = tmpInfo
 	}
 	return tmp, nil
 }

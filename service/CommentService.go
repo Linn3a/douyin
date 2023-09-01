@@ -1,12 +1,14 @@
 package service
 
 import (
+	"douyin/middleware/rabbitmq"
 	"douyin/models"
 	"fmt"
-	"time"
-	"strings"
 	"strconv"
-	"douyin/middleware/rabbitmq"
+	"strings"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 func GetVideoCommentCount(v *models.VideoInfo) error {
@@ -29,28 +31,38 @@ func GetCommentIdsByVideoId(vid uint) ([]uint, error) {
 }
 
 func CreateComment(uid uint, vid uint, text string) (*models.Comment, error) {
-	comment := models.Comment{
-		UserId:  uid,
-		VideoId: vid,
-		Content: text,
-	}
+	
 	// err := models.DB.Create(&comment).Error
 	// 关注消息加入消息队列
+	cIdStr, _ := models.RedisClient.Get(RedisCtx, INTERACT_MAX_COMMENT_KEY).Result()
+	models.RedisClient.Incr(RedisCtx, INTERACT_MAX_COMMENT_KEY)
+	cIdInt, _ := strconv.Atoi(cIdStr)
+	cId := uint(cIdInt)
+	cId = cId + 1
+	models.RedisClient.SAdd(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(vid)), cId)
 	sb := strings.Builder{}
-	sb.WriteString(comment.Content)
+	sb.WriteString(strconv.Itoa(int(cId)))
 	sb.WriteString(" ")
-	sb.WriteString(strconv.Itoa(int(comment.UserId)))
+	sb.WriteString(text)
 	sb.WriteString(" ")
-	sb.WriteString(strconv.Itoa(int(comment.VideoId)))
+	sb.WriteString(strconv.Itoa(int(uid)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(vid)))
 	rabbitmq.RmqCommentAdd.Publish(sb.String())
 	fmt.Println("评论消息入队成功")
-	models.RedisClient.SAdd(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(vid)), comment.ID)
+	comment := models.Comment{
+		Model: gorm.Model{
+			ID: cId,
+		},
+		Content: text,
+		UserId: uid,
+		VideoId: vid,
+	}
 	return &comment, nil
 }
 
-
 func DeleteComment(id uint) error {
-	rabbitmq.RmqCommentDel.Publish(strconv.FormatInt(int64(id),10))
+	rabbitmq.RmqCommentDel.Publish(strconv.FormatInt(int64(id), 10))
 	fmt.Println("删除评论消息入队成功")
 	return nil
 }
@@ -64,7 +76,7 @@ func GetCommentsByIds(cids []uint) ([]models.Comment, error) {
 func GenerateCommentInfo(c *models.Comment) models.CommentInfo {
 	return models.CommentInfo{
 		ID:         int64(c.ID),
-		User:       nil,
+		User:      	nil,
 		Content:    c.Content,
 		CreateDate: time.Now().String(),
 	}

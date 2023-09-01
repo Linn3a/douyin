@@ -33,8 +33,8 @@ type VideoListResponse struct {
 func Publish(c *fiber.Ctx) error {
 	token := c.FormValue("token")
 	var uid uint
-	if err := jwt.JwtClient.AuthTokenValid(c, &Response{}, &uid, token); err != nil {
-		return err
+	if err, httpErr := jwt.JwtClient.AuthTokenValid(c, &Response{}, &uid, token); err != nil {
+		return httpErr
 	}
 	title := c.FormValue("title")
 	data, err := c.FormFile("data")
@@ -72,12 +72,13 @@ func Publish(c *fiber.Ctx) error {
 func PublishList(c *fiber.Ctx) error {
 	request := PublishListRequest{}
 	emptyResponse := VideoListResponse{}
-	if err := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
-		return err
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return httpErr
 	}
-	uid, _ := strconv.Atoi(request.UserID)
-	if err := jwt.JwtClient.AuthCurUser(c, &emptyResponse, request.Token, uint(uid)); err != nil {
-		return err
+	uidInt, _ := strconv.Atoi(request.UserID)
+	uid := uint(uidInt)
+	if err, httpErr := jwt.JwtClient.AuthCurUser(c, &emptyResponse, request.Token, uid); err != nil {
+		return httpErr
 	}
 
 	vids, err := service.GetVideoIdsByUserId(uint(uid))
@@ -98,6 +99,10 @@ func PublishList(c *fiber.Ctx) error {
 				StatusMsg: err.Error(),
 			},
 		})
+	}
+	// 填充isfavorite信息
+	for i := 0; i < len(videoInfos); i++ {
+		service.GetVideoIsFavorite(&videoInfos[i], uid)
 	}
 
 	return c.Status(http.StatusOK).JSON(VideoListResponse{

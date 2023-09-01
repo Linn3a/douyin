@@ -24,9 +24,9 @@ func Init() (*fiber.App, error) {
 	if err := models.InitRedis(); err != nil {
 		return nil, err
 	}
-	if err := service.InitOSS(); err != nil {
-		return nil, err
-	}
+	// if err := service.InitOSS(); err != nil {
+	// 	return nil, err
+	// }
 	if err := service.Init2Redis(); err != nil {
 		return nil, err
 	}

@@ -38,7 +38,13 @@ func GetUserFavoriteCount(u *models.UserInfo) error {
 }
 
 func GetUserTotalFavorited(u *models.UserInfo) error {
-	totFavorited, err := models.RedisClient.Get(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(u.ID))).Result()
+	curKey := INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(u.ID))
+	if n, _ := models.RedisClient.Exists(RedisCtx, curKey).Result(); n == 0 {
+		// 未命中则为0，因为当前场景下没有缓存过期
+		u.TotalFavorited = 0
+		return nil
+	}
+	totFavorited, err := models.RedisClient.Get(RedisCtx, curKey).Result()
 	if err != nil {
 		return fmt.Errorf("user tot favorited get error: %v", err)
 	}
@@ -53,7 +59,7 @@ func GetFavoriteVideoIds(uid uint) ([]uint, error) {
 		return []uint{}, err
 	}
 	uintIds := make([]uint, len(favoriteVids))
-	for i, _ := range favoriteVids {
+	for i := 0; i < len(favoriteVids); i++ {
 		tmp, _ := strconv.Atoi(favoriteVids[i])
 		uintIds[i] = uint(tmp)
 	}
@@ -64,9 +70,15 @@ func GetFavoriteVideoIds(uid uint) ([]uint, error) {
 
 // audience2video
 func AddFavoriteVideo(uid uint, vid uint) error {
-	err := models.RedisClient.SAdd(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err()
-	err = models.RedisClient.SAdd(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid).Err()
-	err = models.RedisClient.Incr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid))).Err()
+	if err := models.RedisClient.SAdd(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err(); err != nil {
+		return err
+	}
+	if err := models.RedisClient.SAdd(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid).Err(); err != nil {
+		return err
+	}
+	if err := models.RedisClient.Incr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid))).Err(); err != nil {
+		return err
+	}
 	// like消息加入消息队列
 	sb := strings.Builder{}
 	sb.WriteString(strconv.Itoa(int(uid)))
@@ -74,28 +86,20 @@ func AddFavoriteVideo(uid uint, vid uint) error {
 	sb.WriteString(strconv.Itoa(int(vid)))
 	rabbitmq.RmqLikeAdd.Publish(sb.String())
 	fmt.Println("like消息入队成功")
-	return err
-	// user, err := GetUserById(uid)
-	// if err != nil {
-	// 	return fmt.Errorf("user not found: %v", err)
-	// }
-	// video, err := GetVideoById(vid)
-	// if err != nil {
-	// 	return fmt.Errorf("video not found: %v", err)
-	// }
-	// user := models.User{}
-	// user.ID = uid
-	// video := models.Video{}
-	// video.ID = vid
-	// err := models.DB.Model(&user).Association("LikeVideo").Append(&video)
-	// return err
+	return nil
 }
 
 // audience2video
 func DeleteFavoriteVideo(uid uint, vid uint) error {
-	err := models.RedisClient.SRem(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err()
-	err = models.RedisClient.SRem(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid).Err()
-	err = models.RedisClient.Decr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid))).Err()
+	if err := models.RedisClient.SRem(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err(); err != nil {
+		return err
+	}
+	if err := models.RedisClient.SRem(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid).Err(); err != nil {
+		return err
+	}
+	if err := models.RedisClient.Decr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid))).Err(); err != nil {
+		return err
+	}
 	// like取消消息加入消息队列
 	sb := strings.Builder{}
 	sb.WriteString(strconv.Itoa(int(uid)))
@@ -103,21 +107,7 @@ func DeleteFavoriteVideo(uid uint, vid uint) error {
 	sb.WriteString(strconv.Itoa(int(vid)))
 	rabbitmq.RmqLikeDel.Publish(sb.String())
 	fmt.Println("like取消消息入队成功")
-	return err
-	// user, err := GetUserById(uid)
-	// if err != nil {
-	// 	return fmt.Errorf("user not found: %v", err)
-	// }
-	// video, err := GetVideoById(vid)
-	// if err != nil {
-	// 	return fmt.Errorf("video not found: %v", err)
-	// }
-	// user := models.User{}
-	// user.ID = uid
-	// video := models.Video{}
-	// video.ID = vid
-	// err := models.DB.Model(&user).Association("LikeVideo").Delete(video)
-	// return err
+	return nil
 }
 
 

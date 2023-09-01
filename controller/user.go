@@ -41,8 +41,8 @@ type UserResponse struct {
 func Register(c *fiber.Ctx) error {
 
 	request := UserRegisterRequest{}
-	if err := validator.ValidateClient.ValidateQuery(c, &UserLoginResponse{}, &request); err != nil {
-		return err
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &UserLoginResponse{}, &request); err != nil {
+		return httpErr
 	}
 	username := request.Username
 	password := request.Password
@@ -101,8 +101,8 @@ func Register(c *fiber.Ctx) error {
 
 func Login(c *fiber.Ctx) error {
 	request := UserLoginRequest{}
-	if err := validator.ValidateClient.ValidateQuery(c, &UserLoginResponse{}, &request); err != nil {
-		return err
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &UserLoginResponse{}, &request); err != nil {
+		return httpErr
 	}
 	username := request.Username
 	password := request.Password
@@ -154,12 +154,12 @@ func Login(c *fiber.Ctx) error {
 func UserInfo(c *fiber.Ctx) error {
 	request := UserRequest{}
 	emptyResponse := UserResponse{}
-	if err := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
-		return err
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return httpErr
 	}
 	uid, _ := strconv.Atoi(request.UserID)
-	if err := jwt.JwtClient.AuthCurUser(c, &emptyResponse, request.Token, uint(uid)); err != nil {
-		return err
+	if err, httpErr := jwt.JwtClient.AuthCurUser(c, &emptyResponse, request.Token, uint(uid)); err != nil {
+		return httpErr
 	}
 	user, err := service.GetUserById(uint(uid))
 	if err != nil {

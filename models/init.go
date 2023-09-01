@@ -4,7 +4,7 @@ import (
 	"context"
 	"douyin/config"
 	"fmt"
-	"time"
+	// "time"
 
 	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/mysql"
@@ -49,14 +49,14 @@ var RedisClient *redis.Client
 
 func InitRedis() error {
 	fmt.Println("connect Redis ...")
-	RedisClient := redis.NewClient(&redis.Options{
+	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     config.GlobalConfig.Redis.Address,
 		Password: config.GlobalConfig.Redis.Password,
 		DB:       config.GlobalConfig.Redis.DB,
 		//超时
-		ReadTimeout:  time.Duration(config.GlobalConfig.Redis.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(config.GlobalConfig.Redis.WriteTimeout) * time.Second,
-		PoolTimeout:  time.Duration(config.GlobalConfig.Redis.PoolTimeout) * time.Second,
+		// ReadTimeout:  time.Duration(config.GlobalConfig.Redis.ReadTimeout) * time.Second,
+		// WriteTimeout: time.Duration(config.GlobalConfig.Redis.WriteTimeout) * time.Second,
+		// PoolTimeout:  time.Duration(config.GlobalConfig.Redis.PoolTimeout) * time.Second,
 	})
 	if _, err := RedisClient.Ping(context.Background()).Result(); err != nil {
 		fmt.Println("connect Redis failed")

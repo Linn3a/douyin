@@ -37,12 +37,12 @@ type CommentActionResponse struct {
 func CommentAction(c *fiber.Ctx) error {
 	request := CommentActionRequest{}
 	emptyResponse := CommentActionResponse{}
-	if err := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
-		return err
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return httpErr
 	}
 	var uid uint
-	if err := jwt.JwtClient.AuthTokenValid(c, &emptyResponse, &uid, request.Token); err != nil {
-		return err
+	if err, httpErr := jwt.JwtClient.AuthTokenValid(c, &emptyResponse, &uid, request.Token); err != nil {
+		return httpErr
 	}
 	vid, _ := strconv.Atoi(request.VideoID)
 	actionType := request.ActionType
@@ -54,12 +54,14 @@ func CommentAction(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 4, StatusMsg: "create comment failed"}})
 		}
 		commentInfo := service.GenerateCommentInfo(comment)
-		userInfo, err := service.GetUserInfoById(comment.ID)
+		userInfo, err := service.GetUserInfoById(comment.UserId)
 		if err != nil {
 			fmt.Printf("get user info failed: %v\n", err)
 			return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 5, StatusMsg: "get userinfo failed"}})
 		}
 		commentInfo.User = &userInfo
+		// 填充is follow 信息
+		service.GetUserIsFollow(commentInfo.User, uid)
 		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{
 			Response: Response{StatusCode: 0},
 			Comment:  &commentInfo,
@@ -78,11 +80,12 @@ func CommentAction(c *fiber.Ctx) error {
 func CommentList(c *fiber.Ctx) error {
 	request := CommentListRequest{}
 	emptyResponse := CommentListResponse{}
-	if err := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
-		return err
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return httpErr
 	}
-	if err := jwt.JwtClient.AuthTokenValid(c, &emptyResponse, new(uint), request.Token); err != nil {
-		return err
+	var uid uint
+	if err, httpErr := jwt.JwtClient.AuthTokenValid(c, &emptyResponse, &uid, request.Token); err != nil {
+		return httpErr
 	}
 	vid, _ := strconv.Atoi(request.VideoID)
 	cids, _ := service.GetCommentIdsByVideoId(uint(vid))
@@ -94,12 +97,14 @@ func CommentList(c *fiber.Ctx) error {
 	for i, c := range comments {
 		uids[i] = c.UserId
 	}
-	userInfos, _ := service.GetUserInfosByIds(uids)
+	userInfos, _ := service.GetUserInfoMapByIds(uids)
 	commentInfos := make([]models.CommentInfo, len(cids))
 	for i, c := range comments {
 		commentInfos[i] = service.GenerateCommentInfo(&c)
 		userInfo := userInfos[c.UserId]
 		commentInfos[i].User = &userInfo
+		// 填充is follow信息
+		service.GetUserIsFollow(commentInfos[i].User, uid)
 	}
 	return c.Status(fiber.StatusOK).JSON(CommentListResponse{
 		Response:    Response{StatusCode: 0},

@@ -20,7 +20,6 @@ func GetUserFollowCount(u *models.UserInfo) error {
 	followCount, err := models.RedisClient.SCard(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(u.ID))).Result()
 	if err != nil {
 		return fmt.Errorf("social following set check error: %v", err)
-
 	}
 	u.FollowCount = followCount
 	return nil
@@ -57,6 +56,8 @@ func FollowAction(fromId uint, toId uint) error {
 	sb.WriteString(strconv.Itoa(int(toId)))
 	rabbitmq.RmqFollowAdd.Publish(sb.String())
 	fmt.Println("关注消息入队成功")
+	models.RedisClient.SAdd(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(fromId)), toId)
+	models.RedisClient.SAdd(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(toId)), fromId)
 	return nil
 }
 
@@ -70,8 +71,55 @@ func CancleAction(fromId uint,toId uint)error{
 	rabbitmq.RmqFollowDel.Publish(sb.String())
 	// 记录日志
 	fmt.Println("取关消息入队成功")
+	models.RedisClient.SRem(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(fromId)), toId)
+	models.RedisClient.SRem(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(toId)), fromId)
 	return nil
-		
+}
+
+func GetFollowingIds(fromId uint) ([]uint, error) {
+	toIdsStr, err := models.RedisClient.SMembers(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(fromId))).Result()
+	toIds := make([]uint, len(toIdsStr))
+	for i, toIdStr := range toIdsStr {
+		tmp, _ := strconv.Atoi(toIdStr)
+		toIds[i] = uint(tmp)
+	}
+	return toIds, err
+}
+
+func GetFollowerIds(toId uint) ([]uint, error) {
+	fromIdsStr, err := models.RedisClient.SMembers(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(toId))).Result()
+	fromIds := make([]uint, len(fromIdsStr))
+	for i, toIdStr := range fromIdsStr {
+		tmp, _ := strconv.Atoi(toIdStr)
+		fromIds[i] = uint(tmp)
+	}
+	return fromIds, err
+}
+
+func GetFriendIds(fromId uint) ([]uint, error) {
+	toIdsStr, _ := models.RedisClient.SMembers(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(fromId))).Result()
+	fromIdsStr, _ := models.RedisClient.SMembers(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(fromId))).Result()
+	var searchList []string
+	var searchKey string
+	// 如果是大V
+	if len(toIdsStr) < len(fromIdsStr){
+		searchList = toIdsStr
+		searchKey = SOCIAL_FOLLOWING_KEY
+	// 如果是普通用户
+	} else {
+		searchList = fromIdsStr
+		searchKey = SOCIAL_FOLLOWER_KEY
+	}
+	toIds := make([]uint, len(searchKey))
+	ind := 0
+	for _, toIdStr := range searchList {
+		tmp, _ := strconv.Atoi(toIdStr)
+		if flag, _ := models.RedisClient.SIsMember(RedisCtx, searchKey+strconv.Itoa(tmp), fromId).Result(); flag {
+			toIds[ind] = uint(tmp)
+			ind++
+		}
+	}
+	return toIds[:ind], nil
 }
 
 // HasRelation fromId(follower_id关注者) 是否关注 toId（followed_id被关注者）
