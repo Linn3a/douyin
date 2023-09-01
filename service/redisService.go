@@ -4,6 +4,9 @@ import (
 	"context"
 	"douyin/models"
 	"strconv"
+	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // redis初始化和redis更新使用的函数
@@ -15,6 +18,8 @@ const (
 	SOCIAL_FOLLOWING_KEY           = "social:has_following:"
 	SOCIAL_FOLLOWER_KEY            = "social:has_followers:"
 	INTERACT_COMMENT_KEY           = "interact:has_comments:"
+	BASIC_PUBLISH_KEY              = "basic:publish_works:"
+	BASIC_RECENT_PUBLISH_KEY       = "basic:recent_publish:"
 )
 
 var RedisCtx = context.Background()
@@ -23,6 +28,7 @@ func Init2Redis() error {
 	InitFavorite2Redis()
 	InitFollow2Redis()
 	InitComment2Redis()
+	InitPublish2Redis()
 	return nil
 }
 
@@ -58,7 +64,7 @@ func InitFollow2Redis() {
 
 }
 
-type CommentRelation struct {
+type commentRelation struct {
 	cid uint
 	vid uint
 }
@@ -66,13 +72,32 @@ type CommentRelation struct {
 // 可以迁移到comment service
 func InitComment2Redis() {
 	// 遍历comment表
-	var commentRelations []CommentRelation
+	var commentRelations []commentRelation
 	models.DB.Model(&models.Comment{}).Find(&commentRelations)
 	for _, r := range commentRelations {
 		// 取出vid
 		vid := r.vid
+		cid := r.cid
 		// 更新一个key的内容
-		models.RedisClient.Incr(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(vid)))
+		models.RedisClient.SAdd(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(vid)), cid)
+	}
+}
+
+type publishRelation struct {
+	uid       uint
+	vid       uint
+	createdAt time.Time
+}
+
+func InitPublish2Redis() {
+	var publishRelations []publishRelation
+	models.DB.Model(&models.Video{}).Find(&publishRelations)
+	for _, r := range publishRelations {
+		uid := r.uid
+		vid := r.vid
+		ctime := r.createdAt
+		models.RedisClient.SAdd(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(uid)), vid)
+		models.RedisClient.ZAdd(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(uid)), &redis.Z{Score: float64(ctime.Unix()), Member: vid})
 	}
 }
 

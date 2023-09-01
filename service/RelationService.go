@@ -14,18 +14,6 @@ const RELATION_TABLE_NAME = "user_follows"
 
 
 // redis 查询优化
-
-
-
-func IsUserFollowed(uid uint, u *models.UserInfo) error {
-	isFollowed, err := models.RedisClient.SIsMember(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(uid)), u.ID).Result()
-	if err != nil {
-		return fmt.Errorf("social following set check error: %v", err)
-	}
-	u.IsFollow = isFollowed
-	return nil
-}
-
 func GetUserFollowCount(u *models.UserInfo) error {
 	followCount, err := models.RedisClient.SCard(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(u.ID))).Result()
 	if err != nil {
@@ -42,6 +30,15 @@ func GetUserFollowerCount(u *models.UserInfo) error {
 		return fmt.Errorf("social following set check error: %v", err)
 	}
 	u.FollowerCount = followerCount
+	return nil
+}
+
+func GetUserIsFollow(u *models.UserInfo, from_id uint) error {
+	isFollowed, err := models.RedisClient.SIsMember(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(from_id)), u.ID).Result()
+	if err != nil {
+		return fmt.Errorf("social following set check error: %v", err)
+	}
+	u.IsFollow = isFollowed
 	return nil
 }
 

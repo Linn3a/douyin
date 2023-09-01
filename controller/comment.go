@@ -3,6 +3,8 @@ package controller
 import (
 	"douyin/models"
 	"douyin/service"
+	"douyin/utils/jwt"
+	"douyin/utils/validator"
 	"fmt"
 	"strconv"
 
@@ -33,43 +35,31 @@ type CommentActionResponse struct {
 }
 
 func CommentAction(c *fiber.Ctx) error {
-	request := new(CommentActionRequest)
-	if err := c.QueryParser(request); err != nil {
-		fmt.Printf("request type wrong: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 1, StatusMsg: "request type wrong " + err.Error()}})
+	request := CommentActionRequest{}
+	emptyResponse := CommentActionResponse{}
+	if err := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return err
 	}
-	if err := ValidateStruct(*request); err != nil {
-		fmt.Printf("request invalid: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 2, StatusMsg: "request invalid " + err.Error()}})
-	}
-	token := request.Token
-	uid, err := service.GetUserID(token)
-	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 3, StatusMsg: "get user id failed"}})
+	var uid uint
+	if err := jwt.JwtClient.AuthTokenValid(c, &emptyResponse, &uid, request.Token); err != nil {
+		return err
 	}
 	vid, _ := strconv.Atoi(request.VideoID)
-	// TODO: vid, uid不存在是否报错
-	// if _, err := service.GetUserById(uid); err != nil {
-	// 	fmt.Printf("user don't exist: %v\n", err)
-	// 	return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response:Response{StatusCode: 2, StatusMsg: "User doesn't exist"}})
-	// }
 	actionType := request.ActionType
 	if actionType == "1" {
 		text := request.CommentText
-		comment := models.Comment{
-			UserId:  uid,
-			VideoId: uint(vid),
-			Content: text,
-		}
-		if err := service.CreateComment(&comment); err != nil {
+		comment, err := service.CreateComment(uid, uint(vid), text)
+		if err != nil {
 			fmt.Printf("db create comment failed: %v\n", err)
 			return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 4, StatusMsg: "create comment failed"}})
 		}
-		commentInfo, err := service.GenerateCommentInfo(&comment)
+		commentInfo := service.GenerateCommentInfo(comment)
+		userInfo, err := service.GetUserInfoById(comment.ID)
 		if err != nil {
 			fmt.Printf("get user info failed: %v\n", err)
 			return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 5, StatusMsg: "get userinfo failed"}})
 		}
+		commentInfo.User = &userInfo
 		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{
 			Response: Response{StatusCode: 0},
 			Comment:  &commentInfo,
@@ -85,31 +75,31 @@ func CommentAction(c *fiber.Ctx) error {
 	}
 }
 
-// CommentList all videos have same demo comment list
 func CommentList(c *fiber.Ctx) error {
-	request := new(CommentListRequest)
-	if err := c.QueryParser(request); err != nil {
-		fmt.Printf("request type wrong: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 1, StatusMsg: "request type wrong " + err.Error()}})
+	request := CommentListRequest{}
+	emptyResponse := CommentListResponse{}
+	if err := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return err
 	}
-	if err := ValidateStruct(*request); err != nil {
-		fmt.Printf("request invalid: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 2, StatusMsg: "request invalid " + err.Error()}})
-	}
-	token := request.Token
-	if _, err := service.ParseToken(token); err != nil {
-		fmt.Printf("token invalid: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 3, StatusMsg: "token invalid"}})
+	if err := jwt.JwtClient.AuthTokenValid(c, &emptyResponse, new(uint), request.Token); err != nil {
+		return err
 	}
 	vid, _ := strconv.Atoi(request.VideoID)
-	// TODO: vid不存在是否报错
-	commentInfos, err := service.GetCommentInfosByVideoId(uint(vid))
-	if err != nil {
-		fmt.Printf("get commentInfos failed: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 4, StatusMsg: "get commentInfos failed"}})
-	}
-	if len(commentInfos) == 0 {
+	cids, _ := service.GetCommentIdsByVideoId(uint(vid))
+	comments, _ := service.GetCommentsByIds(cids)
+	if len(cids) == 0 {
 		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 0, StatusMsg: "no comments found"}, CommentList: []models.CommentInfo{}})
+	}
+	uids := make([]uint, len(cids))
+	for i, c := range comments {
+		uids[i] = c.UserId
+	}
+	userInfos, _ := service.GetUserInfosByIds(uids)
+	commentInfos := make([]models.CommentInfo, len(cids))
+	for i, c := range comments {
+		commentInfos[i] = service.GenerateCommentInfo(&c)
+		userInfo := userInfos[c.UserId]
+		commentInfos[i].User = &userInfo
 	}
 	return c.Status(fiber.StatusOK).JSON(CommentListResponse{
 		Response:    Response{StatusCode: 0},

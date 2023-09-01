@@ -6,31 +6,30 @@ import (
 	"fmt"
 	"strconv"
 
+	"douyin/utils/jwt"
+	"douyin/utils/validator"
+
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/gorm"
 )
 
-// usersLoginInfo use map to store user info, and key is username+password for demo
-// user data will be cleared every time the server starts
-// test data: username=zhanglei, password=douyin
-var usersLoginInfo = map[string]models.User{
-	"zhangleidouyin": {
-		Model: gorm.Model{
-			ID: 1,
-		},
-		Name:     "zhanglei",
-		Password: "douyin",
-		// Id:            1,
-		// Name:          "zhanglei",
-		// FollowCount:   10,
-		// FollowerCount: 5,
-		// IsFollow:      true,
-	},
+type UserRegisterRequest struct {
+	Username string `query:"username" validate:"required"`
+	Password string `query:"password" validate:"required"`
+}
+
+type UserLoginRequest struct {
+	Username string `query:"username" validate:"required"`
+	Password string `query:"password" validate:"required"`
+}
+
+type UserRequest struct {
+	UserID string `query:"user_id" validate:"required"`
+	Token  string `query:"token" validate:"required"` // 用户鉴权token
 }
 
 type UserLoginResponse struct {
 	Response
-	UserId int64  `json:"user_id,omitempty"`
+	UserID int64  `json:"user_id,omitempty"`
 	Token  string `json:"token"`
 }
 
@@ -40,14 +39,19 @@ type UserResponse struct {
 }
 
 func Register(c *fiber.Ctx) error {
-	username := c.Query("username")
-	password := c.Query("password")
+
+	request := UserRegisterRequest{}
+	if err := validator.ValidateClient.ValidateQuery(c, &UserLoginResponse{}, &request); err != nil {
+		return err
+	}
+	username := request.Username
+	password := request.Password
 
 	if _, err := service.GetUserByName(username); err == nil {
 		fmt.Println("The user exits")
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
-				StatusCode: 1,
+				StatusCode: 3,
 				StatusMsg:  "User already exist",
 			},
 		})
@@ -62,44 +66,49 @@ func Register(c *fiber.Ctx) error {
 		fmt.Println("插入失败", err)
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
-				StatusCode: 2,
+				StatusCode: 4,
 				StatusMsg:  "User insertion error",
 			},
 		})
 	}
-
 	fmt.Println("插入成功")
-	if token, err := service.GenerateToken(&newUser); err == nil {
-		fmt.Printf("token is : %s", token)
+
+	token, err := service.GenerateToken(&newUser)
+	if err != nil {
+		fmt.Println("创建token失败")
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
-				StatusCode: 0,
+				StatusCode: 5,
+				StatusMsg:  "Unable to create token",
 			},
-			UserId: int64(newUser.ID),
-			Token:  token,
+			UserID: int64(newUser.ID),
 		})
 	}
 
-	fmt.Println("创建token失败")
+	fmt.Printf("token is : %s", token)
 	return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 		Response: Response{
-			StatusCode: 3,
-			StatusMsg:  "Unable to create token",
+			StatusCode: 0,
 		},
-		UserId: int64(newUser.ID),
+		UserID: int64(newUser.ID),
+		Token:  token,
 	})
 }
 
 func Login(c *fiber.Ctx) error {
-	username := c.Query("username")
-	password := c.Query("password")
+	request := UserLoginRequest{}
+	if err := validator.ValidateClient.ValidateQuery(c, &UserLoginResponse{}, &request); err != nil {
+		return err
+	}
+	username := request.Username
+	password := request.Password
 
 	user, err := service.GetUserByName(username)
 
 	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
-				StatusCode: 1,
+				StatusCode: 3,
 				StatusMsg:  "User doesn't exist",
 			},
 		})
@@ -108,56 +117,61 @@ func Login(c *fiber.Ctx) error {
 	if user.Password != password {
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
-				StatusCode: 2,
+				StatusCode: 4,
 				StatusMsg:  "Password doesn't match",
 			},
 		})
 	}
 
-	if token, err := service.GenerateToken(&user); err == nil {
+	token, err := service.GenerateToken(&user)
+	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
-				StatusCode: 0,
-				StatusMsg:  "Login successfully",
+				StatusCode: 5,
+				StatusMsg:  "Unable to create token",
 			},
-			UserId: int64(user.ID),
-			Token:  token,
 		})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 		Response: Response{
-			StatusCode: 2,
-			StatusMsg:  "Unable to create token",
+			StatusCode: 0,
+			StatusMsg:  "Login successfully",
 		},
+		UserID: int64(user.ID),
+		Token:  token,
 	})
 }
 
 func UserInfo(c *fiber.Ctx) error {
-	token := c.Query("token")
-	claims, err := service.ParseToken(token)
-	if token == "" || err != nil {
-		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 1, StatusMsg:  "token invalid"})
+	request := UserRequest{}
+	emptyResponse := UserResponse{}
+	if err := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return err
 	}
-	uid, _ := strconv.Atoi(c.Query("user_id"))
-	fromId := uint(claims.ID)
-	if uint(uid) != fromId {
-		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 2, StatusMsg:  "user not authorized"})
+	uid, _ := strconv.Atoi(request.UserID)
+	if err := jwt.JwtClient.AuthCurUser(c, &emptyResponse, request.Token, uint(uid)); err != nil {
+		return err
 	}
-
 	user, err := service.GetUserById(uint(uid))
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 3, StatusMsg:  "user not exits"})
+		return c.Status(fiber.StatusOK).JSON(UserResponse{
+			Response: Response{StatusCode: 5, StatusMsg: "user not exits"}})
 	}
-
-	userInfo :=  service.GenerateUserInfo(&user)
-	if fromId != uint(uid){
-		userInfo.IsFollow = service.HasRelation(fromId,uint(uid))
+	userInfo := service.GenerateUserInfo(&user)
+	err = service.GetUserFollowCount(&userInfo)
+	err = service.GetUserFollowerCount(&userInfo)
+	err = service.GetUserTotalFavorited(&userInfo)
+	err = service.GetUserWorkCount(&userInfo)
+	err = service.GetUserFavoriteCount(&userInfo)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(UserResponse{
+			Response:  Response{StatusCode: 6, StatusMsg: "user info construct error"}})
 	}
 	return c.Status(fiber.StatusOK).JSON(
 		UserResponse{
 			Response: Response{StatusCode: 0},
-			User: userInfo ,
+			User:     userInfo,
 		},
 	)
 }
