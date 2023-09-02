@@ -103,6 +103,7 @@ func PublishList(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(VideoListResponse{
 		Response: Response{
 			StatusCode: 0,
+			StatusMsg:  "upload successfully",
 		},
 		VideoList: videoInfos,
 	})

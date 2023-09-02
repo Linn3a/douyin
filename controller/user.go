@@ -54,6 +54,8 @@ func Register(c *fiber.Ctx) error {
 				StatusCode: 3,
 				StatusMsg:  "User already exist",
 			},
+			UserID: 1,
+			Token:  "",
 		})
 	}
 
@@ -69,6 +71,8 @@ func Register(c *fiber.Ctx) error {
 				StatusCode: 4,
 				StatusMsg:  "User insertion error",
 			},
+			UserID: int64(newUser.ID),
+			Token:  "",
 		})
 	}
 	fmt.Println("插入成功")
@@ -111,6 +115,8 @@ func Login(c *fiber.Ctx) error {
 				StatusCode: 3,
 				StatusMsg:  "User doesn't exist",
 			},
+			UserID: 1,
+			Token:  "",
 		})
 	}
 
@@ -120,6 +126,8 @@ func Login(c *fiber.Ctx) error {
 				StatusCode: 4,
 				StatusMsg:  "Password doesn't match",
 			},
+			UserID: 1,
+			Token:  "",
 		})
 	}
 

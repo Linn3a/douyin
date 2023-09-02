@@ -2,8 +2,10 @@ package service
 
 import (
 	"douyin/models"
-	"fmt"
+	"strings"
 	"strconv"
+	"douyin/middleware/rabbitmq"
+	"fmt"
 )
 
 // redis 关系查询优化
@@ -65,12 +67,28 @@ func AddFavoriteVideo(uid uint, vid uint) error {
 	err := models.RedisClient.SAdd(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err()
 	err = models.RedisClient.SAdd(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid).Err()
 	err = models.RedisClient.Incr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid))).Err()
+	// like消息加入消息队列
+	sb := strings.Builder{}
+	sb.WriteString(strconv.Itoa(int(uid)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(vid)))
+	rabbitmq.RmqLikeAdd.Publish(sb.String())
+	fmt.Println("like消息入队成功")
+	return err
+	// user, err := GetUserById(uid)
+	// if err != nil {
+	// 	return fmt.Errorf("user not found: %v", err)
+	// }
+	// video, err := GetVideoById(vid)
+	// if err != nil {
+	// 	return fmt.Errorf("video not found: %v", err)
+	// }
 	// user := models.User{}
 	// user.ID = uid
 	// video := models.Video{}
 	// video.ID = vid
 	// err := models.DB.Model(&user).Association("LikeVideo").Append(&video)
-	return err
+	// return err
 }
 
 // audience2video
@@ -78,12 +96,28 @@ func DeleteFavoriteVideo(uid uint, vid uint) error {
 	err := models.RedisClient.SRem(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err()
 	err = models.RedisClient.SRem(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid).Err()
 	err = models.RedisClient.Decr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid))).Err()
+	// like取消消息加入消息队列
+	sb := strings.Builder{}
+	sb.WriteString(strconv.Itoa(int(uid)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(vid)))
+	rabbitmq.RmqLikeDel.Publish(sb.String())
+	fmt.Println("like取消消息入队成功")
+	return err
+	// user, err := GetUserById(uid)
+	// if err != nil {
+	// 	return fmt.Errorf("user not found: %v", err)
+	// }
+	// video, err := GetVideoById(vid)
+	// if err != nil {
+	// 	return fmt.Errorf("video not found: %v", err)
+	// }
 	// user := models.User{}
 	// user.ID = uid
 	// video := models.Video{}
 	// video.ID = vid
 	// err := models.DB.Model(&user).Association("LikeVideo").Delete(video)
-	return err
+	// return err
 }
 
 
