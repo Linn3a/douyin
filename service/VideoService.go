@@ -121,7 +121,9 @@ func GetFeedVideoIds(latest_time *int64) ([]uint, error) {
 	*latest_time = int64(zVids[len(zVids)-1].Score)
 	vids := make([]uint, len(zVids))
 	for i, zVid := range zVids {
-		tmp, _ := zVid.Member.(uint)
+		tmpStr := zVid.Member.(string)
+		tmpInt, _ := strconv.Atoi(tmpStr)
+		tmp := uint(tmpInt)
 		vids[i] = tmp
 	}
 	return vids, nil
