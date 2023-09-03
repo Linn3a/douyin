@@ -3,12 +3,26 @@ package controller
 import (
 	"douyin/models"
 	"douyin/service"
+	"douyin/utils/jwt"
+	"douyin/utils/validator"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
+
+// type PublishActionRequest struct {
+// 	Token string `query:"token" validate:"required"`
+// 	Data  []byte `query:"data" validate:"required"`
+// 	Title string `query:"title" validate:"required"`
+// }
+
+type PublishListRequest struct {
+	UserID string `query:"user_id" validate:"required"`
+	Token  string `query:"token" validate:"required"`
+}
 
 type VideoListResponse struct {
 	Response
@@ -17,23 +31,18 @@ type VideoListResponse struct {
 
 // Publish check token then save upload file to public directory
 func Publish(c *fiber.Ctx) error {
-	token := c.FormValue("token", "0")
-	userID, err := service.GetUserID(token)
-	if err != nil {
-		log.Printf("Get user id error:%v", err)
-		return c.Status(http.StatusOK).JSON(Response{
-			StatusCode: 1,
-			StatusMsg:  "Invalid token",
-		})
+	token := c.FormValue("token")
+	var uid uint
+	if err, httpErr := jwt.JwtClient.AuthTokenValid(c, &Response{}, &uid, token); err != nil {
+		return httpErr
 	}
-
+	title := c.FormValue("title")
 	data, err := c.FormFile("data")
 	if err != nil {
 		return c.Status(http.StatusOK).JSON(Response{
 			StatusCode: 1,
 			StatusMsg:  err.Error(),
 		})
-
 	}
 	videoUrl, coverUrl, err := service.UploadVideoToOSS(data)
 	if err != nil {
@@ -45,18 +54,7 @@ func Publish(c *fiber.Ctx) error {
 	fmt.Printf("videoUrl:%v\n", videoUrl)
 	fmt.Printf("coverUrl:%v\n", coverUrl)
 
-	//println(data.Filename)
-	//filename := filepath.Base(data.Filename)
-
-	newVideo := models.Video{
-		Title:    c.FormValue("title", "title"),
-		PlayUrl:  videoUrl,
-		CoverUrl: coverUrl,
-		AuthorID: userID,
-	}
-
-	err = service.CreateVideo(newVideo)
-	if err != nil {
+	if err := service.CreateVideo(title, videoUrl, coverUrl, uid); err != nil {
 		log.Printf("Mysql create video error:%v", err)
 		return c.Status(http.StatusOK).JSON(Response{
 			StatusCode: 1,
@@ -72,47 +70,41 @@ func Publish(c *fiber.Ctx) error {
 
 // PublishList all users have same publish video list
 func PublishList(c *fiber.Ctx) error {
-	token := c.FormValue("token", "0")
-	userID, err := service.GetUserID(token)
+	request := PublishListRequest{}
+	emptyResponse := VideoListResponse{}
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return httpErr
+	}
+	uidInt, _ := strconv.Atoi(request.UserID)
+	uid := uint(uidInt)
+	if err, httpErr := jwt.JwtClient.AuthCurUser(c, &emptyResponse, request.Token, uid); err != nil {
+		return httpErr
+	}
+
+	vids, err := service.GetVideoIdsByUserId(uint(uid))
 	if err != nil {
-		log.Printf("Get user id error:%v", err)
-		return c.Status(http.StatusOK).JSON(Response{
-			StatusCode: 1,
-			StatusMsg:  "Invalid token",
+		return c.Status(http.StatusOK).JSON(VideoListResponse{
+			Response: Response{
+				StatusCode: 5,
+				StatusMsg: err.Error(),
+			},
 		})
 	}
-	videos, err := service.GetVideosByUserId(userID)
+
+	videoInfos, err := service.GetVideoInfosByIds(vids) 
 	if err != nil {
-		return err
+		return c.Status(http.StatusOK).JSON(VideoListResponse{
+			Response: Response{
+				StatusCode: 6,
+				StatusMsg: err.Error(),
+			},
+		})
 	}
-	authorIds := make([]uint, len(videos))
-	videoIds := make([]uint, len(videos))
-	for ind, video := range videos {
-		authorIds[ind] = video.AuthorID
-		videoIds[ind] = video.ID
+	// 填充isfavorite信息
+	for i := 0; i < len(videoInfos); i++ {
+		service.GetVideoIsFavorite(&videoInfos[i], uid)
 	}
-	userInfos, err := service.GetUserInfosByIds(authorIds)
-	if err != nil {
-		fmt.Printf("userInfos get error: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 6, StatusMsg: "videos get error" + err.Error()}})
-	}
-	favoriteCounts, err := service.CountFavoritedUsersByIds(videoIds)
-	if err != nil {
-		fmt.Printf("favorite counts get error: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 7, StatusMsg: "favorite counts get error" + err.Error()}})
-	}
-	commentCounts, err := service.CountCommentsByVideoIds(videoIds)
-	if err != nil {
-		fmt.Printf("comment counts get error: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 8, StatusMsg: "comment counts get error" + err.Error()}})
-	}
-	videoInfos := make([]models.VideoInfo, len(videos))
-	for ind, video := range videos {
-		userInfo := userInfos[video.AuthorID]
-		favoriteCount := favoriteCounts[video.ID]
-		commentCount := commentCounts[video.ID]
-		videoInfos[ind] = models.NewVideoInfo(&video, &userInfo, favoriteCount, commentCount)
-	}
+
 	return c.Status(http.StatusOK).JSON(VideoListResponse{
 		Response: Response{
 			StatusCode: 0,

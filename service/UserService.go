@@ -4,10 +4,11 @@ import (
 	// "gorm.io/gorm"
 	// "sync/atomic"
 	"douyin/models"
-	"douyin/public"
 	"douyin/utils/jwt"
-	"log"
 )
+
+
+
 
 func GetUserByName(userName string) (models.User, error) {
 	tmp := models.User{}
@@ -30,32 +31,36 @@ func GetUserById(ID uint) (models.User, error) {
 	return tmp, nil
 }
 
+func GetUsersByIds(IDs []uint) ([]models.User, error) {
+	tmp := []models.User{}
+	if err := models.DB.Where("id in (?)", IDs).Find(&tmp).Error; err != nil {
+		return tmp, err
+	}
+	return tmp, nil
+}
+
 func GenerateToken(u *models.User) (string, error) {
-	// TODO: Add expired time to token claims
-	token, err := public.Jwt.CreateToken(jwt.CustomClaims{ID: int64((*u).ID)})
+	token, err := jwt.JwtClient.NewToken(u.ID)
 	if err != nil {
-		return token, err
+		return "token", err
 	}
 	return token, nil
 }
 
-func ParseToken(token string) (*jwt.CustomClaims, error) {
-	parsedToken, err := public.Jwt.ParseToken(token)
-	if err != nil {
-		return nil, err
-	}
-	return parsedToken, nil
-
-}
-
 func GenerateUserInfo(u *models.User) models.UserInfo {
-	userInfo := models.NewUserInfo(u)
-	GetUserFollowCount(&userInfo)
-	GetUserFollowerCount(&userInfo)
-	// IsUserFollowed(curId, &userInfo)
-	GetUserFavoriteCount(&userInfo)
-	GetUserTotalFavorited(&userInfo)
-	return userInfo
+	return models.UserInfo{
+		ID:              int64(u.ID),
+		Name:            u.Name,
+		FollowCount:     0,
+		FollowerCount:   0,
+		IsFollow:        false,
+		Avatar:          u.Avatar,
+		BackgroundImage: u.BackgroundImage,
+		Signature:       u.Signature,
+		TotalFavorited:  0,
+		WorkCount:       0,
+		FavoriteCount:   0,
+	}
 }
 
 func GetUserInfoById(id uint) (models.UserInfo, error) {
@@ -64,34 +69,91 @@ func GetUserInfoById(id uint) (models.UserInfo, error) {
 		return models.UserInfo{}, err
 	}
 	userInfo := GenerateUserInfo(&user)
+	err = GetUserFollowCount(&userInfo)
+	if err != nil {
+		return userInfo, err
+	}
+	err = GetUserFollowerCount(&userInfo)
+	if err != nil {
+		return userInfo, err
+	}
+	err = GetUserTotalFavorited(&userInfo)
+	if err != nil {
+		return userInfo, err
+	}
+	err = GetUserWorkCount(&userInfo)
+	if err != nil {
+		return userInfo, err
+	}
+	err = GetUserFavoriteCount(&userInfo)
+	if err != nil {
+		return userInfo, err
+	}
 	return userInfo, nil
 }
 
-func GetUsersByIds(uids []uint) ([]models.User, error) {
-	users := make([]models.User, len(uids))
-	err := models.DB.Where("id in ?", uids).Find(&users).Error
-	return users, err
+func GetUserInfoMapByIds(ids []uint) (map[uint]models.UserInfo, error) {
+	tmp := make(map[uint]models.UserInfo, len(ids))
+	users, err := GetUsersByIds(ids)
+	if err != nil {
+		return tmp, err
+	}
+	for _, user := range users {
+		tmpInfo := GenerateUserInfo(&user)
+		err = GetUserFollowCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserFollowerCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserTotalFavorited(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserWorkCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserFavoriteCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		tmp[user.ID] = tmpInfo
+	}
+	return tmp, nil
 }
 
-func GetUserInfosByIds(uids []uint) (map[uint]models.UserInfo, error) {
-	users, err := GetUsersByIds(uids)
+func GetUserInfosByIds(ids []uint) ([]models.UserInfo, error) {
+	tmp := make([]models.UserInfo, len(ids))
+	users, err := GetUsersByIds(ids)
 	if err != nil {
-		var userInfoIdMap map[uint]models.UserInfo
-		return userInfoIdMap, err
+		return tmp, err
 	}
-	// fmt.Printf("users: %v\n", users)
-	userInfoIdMap := make(map[uint]models.UserInfo, len(users))
-	for _, u := range users {
-		userInfoIdMap[u.ID] = GenerateUserInfo(&u)
+	for i, user := range users {
+		tmpInfo := GenerateUserInfo(&user)
+		err = GetUserFollowCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserFollowerCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserTotalFavorited(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserWorkCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		err = GetUserFavoriteCount(&tmpInfo)
+		if err != nil {
+			return tmp, err
+		}
+		tmp[i] = tmpInfo
 	}
-	return userInfoIdMap, nil
-}
-
-func GetUserID(token string) (uint, error) {
-	claims, err := ParseToken(token)
-	if err != nil {
-		log.Printf("token invalid: %v\n", err)
-		return 0, err
-	}
-	return uint(claims.ID), nil
+	return tmp, nil
 }

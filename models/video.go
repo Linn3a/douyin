@@ -24,16 +24,3 @@ type VideoInfo struct {
 	IsFavorite    bool     `json:"is_favorite"`
 	Title         string   `json:"title"`
 }
-
-func NewVideoInfo(v *Video) VideoInfo {
-	return VideoInfo{
-		ID:            int64((*v).ID),
-		Author:        nil,
-		PlayUrl:       (*v).PlayUrl,
-		CoverUrl:      (*v).CoverUrl,
-		FavoriteCount: 0,
-		CommentCount:  0,
-		IsFavorite:    false,
-		Title:         (*v).Title,
-	}
-}

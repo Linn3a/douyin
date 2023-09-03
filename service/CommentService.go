@@ -1,97 +1,83 @@
 package service
 
 import (
+	"douyin/middleware/rabbitmq"
 	"douyin/models"
 	"fmt"
-	"strings"
 	"strconv"
-	"douyin/middleware/rabbitmq"
+	"strings"
+	"time"
+
+	"gorm.io/gorm"
 )
 
-
-func CreateComment(newComment *models.Comment) error {
-	// 关注消息加入消息队列
-	sb := strings.Builder{}
-	sb.WriteString(newComment.Content)
-	sb.WriteString(" ")
-	sb.WriteString(strconv.Itoa(int(newComment.UserId)))
-	sb.WriteString(" ")
-	sb.WriteString(strconv.Itoa(int(newComment.VideoId)))
-	rabbitmq.RmqCommentAdd.Publish(sb.String())
-	fmt.Println("评论消息入队成功")
+func GetVideoCommentCount(v *models.VideoInfo) error {
+	commentCount, err := models.RedisClient.SCard(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(v.ID))).Result()
+	if err != nil {
+		return fmt.Errorf("comment list count error: %v", err)
+	}
+	v.CommentCount = commentCount
 	return nil
 }
 
+func GetCommentIdsByVideoId(vid uint) ([]uint, error) {
+	tmp, err := models.RedisClient.SMembers(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(vid))).Result()
+	cids := make([]uint, len(tmp))
+	for i, tmp_cid := range tmp {
+		int_cid, _ := strconv.Atoi(tmp_cid)
+		cids[i] = uint(int_cid)
+	}
+	return cids, err
+}
+
+func CreateComment(uid uint, vid uint, text string) (*models.Comment, error) {
+	
+	// err := models.DB.Create(&comment).Error
+	// 关注消息加入消息队列
+	cIdStr, _ := models.RedisClient.Get(RedisCtx, INTERACT_MAX_COMMENT_KEY).Result()
+	models.RedisClient.Incr(RedisCtx, INTERACT_MAX_COMMENT_KEY)
+	cIdInt, _ := strconv.Atoi(cIdStr)
+	cId := uint(cIdInt)
+	cId = cId + 1
+	models.RedisClient.SAdd(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(vid)), cId)
+	sb := strings.Builder{}
+	sb.WriteString(strconv.Itoa(int(cId)))
+	sb.WriteString(" ")
+	sb.WriteString(text)
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(uid)))
+	sb.WriteString(" ")
+	sb.WriteString(strconv.Itoa(int(vid)))
+	rabbitmq.RmqCommentAdd.Publish(sb.String())
+	fmt.Println("评论消息入队成功")
+	comment := models.Comment{
+		Model: gorm.Model{
+			ID: cId,
+		},
+		Content: text,
+		UserId: uid,
+		VideoId: vid,
+	}
+	return &comment, nil
+}
+
 func DeleteComment(id uint) error {
-	rabbitmq.RmqCommentDel.Publish(strconv.FormatInt(int64(id),10))
+	rabbitmq.RmqCommentDel.Publish(strconv.FormatInt(int64(id), 10))
 	fmt.Println("删除评论消息入队成功")
 	return nil
 }
 
-func GetCommentsByVideoId(vid uint) ([]models.Comment, error) {
-	comments := []models.Comment{}
-	err := models.DB.Where("video_id=?", vid).Find(&comments).Error
+func GetCommentsByIds(cids []uint) ([]models.Comment, error) {
+	comments := make([]models.Comment, len(cids))
+	err := models.DB.Where("id in (?)", cids).Find(&comments).Error
 	return comments, err
 }
 
-// func CountCommentsByVideoId(vid uint) (int64, error) {
-// 	comments := []models.Comment{}
-// 	err := models.DB.Where("video_id=?", vid).Find(&comments).Error
-// 	counts := int64(len(comments))
-// 	return counts, err
-// }
-
-func CountCommentsByVideoIds(vids []uint) (map[uint]int64, error) {
-	var queryResults []map[string]interface{}
-	err := models.DB.Table("comments").
-		Select("video_id as vid, COUNT(id) as cid_count").
-		Where("video_id IN ?", vids).
-		Group("video_id").
-		Find(&queryResults).Error
-	counts := make(map[uint]int64, len(vids))
-	for _, result := range queryResults {
-		counts[uint(result["vid"].(int64))] = result["cid_count"].(int64)
+func GenerateCommentInfo(c *models.Comment) models.CommentInfo {
+	return models.CommentInfo{
+		ID:         int64(c.ID),
+		User:      	nil,
+		Content:    c.Content,
+		CreateDate: time.Now().String(),
 	}
-	return counts, err
-}
-
-func GenerateCommentInfo(c *models.Comment) (models.CommentInfo, error) {
-	uid := (*c).UserId
-	userInfo, err := GetUserInfoById(uid)
-	if err != nil {
-		return models.CommentInfo{}, fmt.Errorf("get userinfo failed: %v", err)
-	}
-	commentInfo := models.NewCommentInfo(c, userInfo)
-	return commentInfo, nil
-}
-
-func GenerateCommentInfos(comments *[]models.Comment) ([]models.CommentInfo, error) {
-	uids := make([]uint, len(*comments))
-	for ind, c := range *comments {
-		uids[ind] = c.UserId
-	}
-	userInfoIdMap, err := GetUserInfosByIds(uids)
-	if err != nil {
-		return []models.CommentInfo{}, fmt.Errorf("get userinfos failed: %v", err)
-	}
-	commentInfos := make([]models.CommentInfo, len(*comments))
-	for ind, c := range *comments {
-		commentInfos[ind] = models.NewCommentInfo(
-			&c,
-			userInfoIdMap[c.UserId],
-		)
-	}
-	return commentInfos, nil
-}
-
-func GetCommentInfosByVideoId(vid uint) ([]models.CommentInfo, error) {
-	comments, err := GetCommentsByVideoId(vid)
-	if err != nil {
-		return []models.CommentInfo{}, fmt.Errorf("get comments failed: %v", err)
-	}
-	commentInfos, err := GenerateCommentInfos(&comments)
-	if err != nil {
-		return []models.CommentInfo{}, fmt.Errorf("generate commentInfos failed: %v", err)
-	}
-	return commentInfos, nil
 }

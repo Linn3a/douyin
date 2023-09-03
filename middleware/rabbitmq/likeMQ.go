@@ -122,7 +122,7 @@ func (l *LikeMQ) consumerLikeAdd(messages <-chan amqp.Delivery) {
 		video.ID = uint(videoId)
 		err := models.DB.Model(&user).Association("LikeVideo").Append(&video)
 		if err!=nil {fmt.Println(err) }
-	
+
 	}
 }
 

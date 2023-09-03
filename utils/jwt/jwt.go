@@ -4,69 +4,77 @@ import (
 	"fmt"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gofiber/fiber/v2"
 )
 
-// JWT signing Key
 type JWT struct {
-	SigningKey []byte
+	signingKey []byte
 }
 
-// private claims, share information between parties that agree on using them
-type CustomClaims struct {
-	ID int64
-	// TODO: add feature for different authority of different user
-	// AuthorityId int64
+func New(signingKey []byte) *JWT {
+	return &JWT{
+		signingKey: signingKey,
+	}
+}
+
+type BaseResponse interface {
+	Set(sc int32, sm string)
+}
+
+type CustomClaim struct {
+	ID uint
 	jwt.StandardClaims
 }
 
-func NewJWT(SigningKey []byte) *JWT {
-	return &JWT{
-		SigningKey,
+// 1. 签发token，用于注册和登陆serv中
+func (j *JWT) NewToken(uid uint) (string, error) {
+	claims := CustomClaim{
+		ID: uid,
 	}
-}
 
-// func (j *JWT) CreateClaim(audience string, issuer string, validTime int64, id uint) (jwt.StandardClaims) {
-// 	return jwt.StandardClaims{
-// 		Audience: audience,
-// 		ExpiresAt: time.Now().Unix() + validTime,
-// 		Id: strconv.FormatInt(id64, 10),
-// 		IssuedAt: time.Now().Unix(),
-// 		Issuer: "douyin",
-// 		NotBefore: time.Now().Unix(),
-// 		Subject: "token",
-// 	}
-// }
-
-// 利用siningkey加密包裹customclaims返回加密字符串
-func (j *JWT) CreateToken(claims CustomClaims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// zap.S().Debugf(token.SigningString())
-	return token.SignedString(j.SigningKey)
-}
-
-// 利用singingkey 对token有效性进行验证 有效则返回CustomClaims
-func (j *JWT) ParseToken(tokenString string) (*CustomClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return j.SigningKey, nil
-	})
-
+	// Generate encoded token and return
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(j.signingKey)
 	if err != nil {
-		if ve, ok := err.(*jwt.ValidationError); ok {
-			if ve.Errors&jwt.ValidationErrorMalformed != 0 {
-				return nil, fmt.Errorf("token malformed")
-			} else if ve.Errors&jwt.ValidationErrorExpired != 0 {
-				return nil, fmt.Errorf("token expired")
-			} else if ve.Errors&jwt.ValidationErrorNotValidYet != 0 {
-				return nil, fmt.Errorf("token not validate yet")
-			} else {
-				return nil, fmt.Errorf("token not valid")
-			}
+		return "", err
+	} else {
+		return token, nil
+	}
+}
 
-		}
+func parseTokenMap(token *jwt.Token) *CustomClaim {
+	claims := token.Claims.(*CustomClaim)
+	return claims
+}
+
+func (j *JWT) AuthTokenValid(c *fiber.Ctx, resp BaseResponse, uid *uint, requestToken string) (error, error) {
+	token, err := jwt.ParseWithClaims(requestToken, &CustomClaim{}, func(token *jwt.Token) (interface{}, error) {
+		return j.signingKey, nil
+	})
+	if err != nil {
+		fmt.Printf("token invalid: %v\n", err)
+		resp.Set(3, "token invalid")
+		return fmt.Errorf("token invalid: %v", err), c.Status(fiber.StatusOK).JSON(resp)
 	}
-	// verify the token claims
-	if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
-		return claims, nil
+	(*uid) = (*parseTokenMap(token)).ID
+	return nil, nil
+}
+
+func (j *JWT) AuthCurUser(c *fiber.Ctx, resp BaseResponse, requestToken string, uid uint) (error, error) {
+	token, err := jwt.ParseWithClaims(requestToken, &CustomClaim{}, func(token *jwt.Token) (interface{}, error) {
+		return j.signingKey, nil
+	})
+	if err != nil {
+		fmt.Printf("token invalid: %v\n", err)
+		resp.Set(3, "token invalid")
+		return fmt.Errorf("token invalid: %v", err), c.Status(fiber.StatusOK).JSON(resp)
 	}
-	return nil, fmt.Errorf("token not valid")
+	user_id := (*parseTokenMap(token)).ID
+	fmt.Print(user_id, uid)
+	if user_id != uid {
+		fmt.Print(user_id, uid)
+		fmt.Printf("unauthorized: %v\n", err)
+		resp.Set(4, "unauthorized")
+		return fmt.Errorf("unauthorized: %v", err), c.Status(fiber.StatusOK).JSON(resp)
+	}
+	return nil, nil
 }

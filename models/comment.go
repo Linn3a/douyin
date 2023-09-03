@@ -1,8 +1,6 @@
 package models
 
 import (
-	"time"
-
 	"gorm.io/gorm"
 )
 
@@ -15,17 +13,8 @@ type Comment struct {
 
 // 用于响应http请求
 type CommentInfo struct {
-	ID         int64    `json:"id"`
-	User       UserInfo `json:"user"`
-	Content    string   `json:"content"`
-	CreateDate string   `json:"create_date"`
-}
-
-func NewCommentInfo(c *Comment, ui UserInfo) CommentInfo {
-	return CommentInfo{
-		ID:         int64((*c).ID),
-		User:       ui,
-		Content:    (*c).Content,
-		CreateDate: time.Now().String(),
-	}
+	ID         int64     `json:"id"`
+	User       *UserInfo `json:"user"`
+	Content    string    `json:"content"`
+	CreateDate string    `json:"create_date"`
 }

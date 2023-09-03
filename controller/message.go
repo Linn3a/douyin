@@ -2,92 +2,99 @@ package controller
 
 import (
 	"douyin/models"
-	"fmt"
+	"douyin/service"
+	"douyin/utils/jwt"
+	"douyin/utils/validator"
 	"net/http"
 	"strconv"
-	"time"
-	"douyin/service"
 	"github.com/gofiber/fiber/v2"
 )
 
-var tempChat = map[string][]models.Message{}
+type MessageActionRequest struct {
+	Token      string `query:"token" validate:"required"`
+	ToUserID   string `query:"to_user_id" validate:"required"`
+	ActionType string `query:"action_type" validate:"required,oneof=1 2"`
+	Content    string `query:"content" validate:"required"`
+}
 
-var messageIdSequence = int64(1)
+type MessageChatRequest struct {
+	Token      string `query:"token" validate:"required"`
+	ToUserID   string `query:"to_user_id" validate:"required"`
+	PreMsgTime string `query:"pre_msg_time" validate:"required"`
+}
 
 type ChatResponse struct {
 	Response
-	MessageList []models.Message `json:"message_list"`
-	PreMsgTime	int64		   	`json:"pre_msg_time"`
+	MessageList []models.MessageInfo `json:"message_list"`
+	PreMsgTime  int64                `json:"pre_msg_time"`
 }
 
 func MessageAction(c *fiber.Ctx) error {
-	token := c.Query("token")
-	toUserId, _ := strconv.Atoi(c.Query("to_user_id"))
-	content := c.Query("content")
-
-	//鉴权服务
-	if claims, err := service.ParseToken(token); err != nil {
-		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
-	}else{
-		fromUserId := uint(claims.ID)
-		// chatKey := genChatKey(int64(fromUserId), int64(toUserId))
-		curMessage := models.Message{
-			CreateTime: int64(time.Now().Unix()),//以秒为时间单位
-			Content: content,
-			FromUserID:int64(fromUserId),
-			ToUserID:int64(toUserId),
-		}
-		service.AddMessage(curMessage)
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 0, StatusMsg:"发送消息成功！"})
-
+	request := MessageActionRequest{}
+	emptyResponse := Response{}
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return httpErr
 	}
+	var fromId uint
+	if err, httpErr := jwt.JwtClient.AuthTokenValid(c, &emptyResponse, &fromId, request.Token); err != nil {
+		return httpErr
+	}
+	toIdInt, _ := strconv.Atoi(request.ToUserID)
+	toId := uint(toIdInt)
+	content := request.Content
+
+	service.AddMessage(toId, fromId, content)
+	return c.Status(http.StatusOK).JSON(Response{StatusCode: 0, StatusMsg: "发送消息成功！"})
 }
 
 // MessageChat all users have same follow list
 func MessageChat(c *fiber.Ctx) error {
-	token := c.Query("token")
-	toUserId, _ := strconv.Atoi(c.Query("to_user_id"))
 
-	//鉴权服务
-	if claims, err := service.ParseToken(token); err != nil {
-		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: "User doesn't exist"})
-	}else{
-		fromUserId := uint(claims.ID)
-		// 上次消息时间
-		var preMsgTime int64
-		preMsgTimeStr := c.Query("pre_msg_time")
-		if preMsgTimeStr == "" {
-			preMsgTime = 1546926630
-		} else {
-			preMsgTime, _ = strconv.ParseInt(preMsgTimeStr, 10, 64)
-		}
-		msgList, err := service.GetLatestMessageAfter(fromUserId, uint(toUserId), preMsgTime)
-		// 无消息
-		if err != nil {
-			return c.Status(fiber.StatusOK).JSON(ChatResponse{
-				Response: Response{StatusCode: 1,StatusMsg:  "no message"},
-				MessageList: nil,
-				PreMsgTime:  1546926630,
-			})
-		}
-		var nextPreMsgTime int64
-		if len(msgList) == 0 {
-			nextPreMsgTime = 1546926630
-		} else {
-			nextPreMsgTime = msgList[len(msgList)-1].CreateTime
-		}
+	request := MessageChatRequest{}
+	emptyResponse := Response{}
+	if err, httpErr := validator.ValidateClient.ValidateQuery(c, &emptyResponse, &request); err != nil {
+		return httpErr
+	}
+	var fromId uint
+	if err, httpErr := jwt.JwtClient.AuthTokenValid(c, &emptyResponse, &fromId, request.Token); err != nil {
+		return httpErr
+	}
+	toIdnInt, _ := strconv.Atoi(request.ToUserID)
+	toId := uint(toIdnInt)
+
+	// 上次消息时间
+	var preMsgTime int64
+	preMsgTimeStr := request.PreMsgTime
+	if preMsgTimeStr == "" {
+		preMsgTime = 1546926630
+	} else {
+		preMsgTime, _ = strconv.ParseInt(preMsgTimeStr, 10, 64)
+	}
+	mids, err := service.GetMessagesIds(fromId, toId, &preMsgTime)
+	nextPreMsgTime := preMsgTime
+	// msgList, err := service.GetLatestMessageAfter(fromId, toId, preMsgTime)
+	messages, err := service.GetMessagesByIds(mids)
+	// 无消息
+	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(ChatResponse{
-			Response: Response{StatusCode: 0,StatusMsg:  "成功获取消息！"},
-			MessageList: msgList,
-			PreMsgTime:  nextPreMsgTime,
+			Response:    Response{StatusCode: 1, StatusMsg: "no message"},
+			MessageList: nil,
+			PreMsgTime:  1546926630,
 		})
-
 	}
-}
-
-func genChatKey(userIdA int64, userIdB int64) string {
-	if userIdA > userIdB {
-		return fmt.Sprintf("%d_%d", userIdB, userIdA)
+	messageInfos := make([]models.MessageInfo, len(mids))
+	for i, m := range messages {
+		messageInfos[i] = service.GenerateMessageInfo(&m)
 	}
-	return fmt.Sprintf("%d_%d", userIdA, userIdB)
+	// var nextPreMsgTime int64
+	// if len(msgList) == 0 {
+	// 	nextPreMsgTime = 1546926630
+	// } else {
+	// 	nextPreMsgTime = msgList[len(msgList)-1].CreateTime
+	// }
+	return c.Status(fiber.StatusOK).JSON(ChatResponse{
+		Response:    Response{StatusCode: 0, StatusMsg: "成功获取消息！"},
+		MessageList: messageInfos,
+		PreMsgTime:  nextPreMsgTime,
+	})
 }

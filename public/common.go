@@ -10,5 +10,5 @@ var (
 
 func InitJWT() {
 	// TODO: ADD jwt signing key to configuration file
-	Jwt = jwt.NewJWT([]byte("test_key"))
+	// Jwt = jwt.NewJWT([]byte("test_key"))
 }

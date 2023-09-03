@@ -4,8 +4,10 @@ import (
 	"douyin/config"
 	"douyin/controller"
 	"douyin/models"
-	"douyin/public"
 	"douyin/service"
+	"douyin/utils/jwt"
+	"douyin/utils/validator"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"douyin/middleware/rabbitmq"
@@ -22,17 +24,18 @@ func Init() (*fiber.App, error) {
 	if err := models.InitRedis(); err != nil {
 		return nil, err
 	}
-	if err := service.InitOSS(); err != nil {
-		return nil, err
-	}
+	// if err := service.InitOSS(); err != nil {
+	// 	return nil, err
+	// }
 	if err := service.Init2Redis(); err != nil {
 		return nil, err
 	}
+	jwt.InitJWT()
+	validator.InitValidator()
 	err = rabbitmq.InitRabbitMQ()
 	if err != nil {
 		return nil, err
 	}
-	public.InitJWT()
 
 	app := fiber.New()
 	controller.RegisterRoutes(app)

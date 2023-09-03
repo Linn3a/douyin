@@ -33,31 +33,15 @@ type User struct {
 // 用于响应http请求的结构
 // TODO: add info from other service
 type UserInfo struct {
-	ID   int64 				`json:"id"`
-	Name string				`json:"name"`
-	FollowCount     int64	`json:"follow_count"`
-	FollowerCount   int64	`json:"follower_count"`
-	IsFollow        bool	`json:"is_follow"`
-	Avatar           string	`json:"avatar"`
-	BackgroundImage string	`json:"background_image"`
-	Signature        string	`json:"signature"`
-	TotalFavorited  int64	`json:"total_favorited"`
-	WorkCount       int64	`json:"work_count"`
-	FavoriteCount   int64	`json:"favorite_count"`
-}
-
-func NewUserInfo(u *User) UserInfo {
-	return UserInfo{
-		ID:               int64((*u).ID),
-		Name:             (*u).Name,
-		FollowCount:     0,
-		FollowerCount:   0,
-		IsFollow:        false,
-		Avatar:           (*u).Avatar,
-		BackgroundImage: (*u).BackgroundImage,
-		Signature:        (*u).Signature,
-		TotalFavorited:  0,
-		WorkCount:       0,
-		FavoriteCount:	  0,
-	}
+	ID              int64  `json:"id"`
+	Name            string `json:"name"`
+	FollowCount     int64  `json:"follow_count"`
+	FollowerCount   int64  `json:"follower_count"`
+	IsFollow        bool   `json:"is_follow"`
+	Avatar          string `json:"avatar"`
+	BackgroundImage string `json:"background_image"`
+	Signature       string `json:"signature"`
+	TotalFavorited  int64  `json:"total_favorited"`
+	WorkCount       int64  `json:"work_count"`
+	FavoriteCount   int64  `json:"favorite_count"`
 }
