@@ -4,6 +4,7 @@ import (
 	"douyin/models"
 	"douyin/service"
 	"douyin/utils/jwt"
+	"douyin/utils/log"
 	"douyin/utils/validator"
 	"fmt"
 	"strconv"
@@ -36,13 +37,13 @@ func FavoriteAction(c *fiber.Ctx) error {
 	actionType := request.ActionType
 	if actionType == "1" {
 		if err := service.AddFavoriteVideo(uid, uint(vid)); err != nil {
-			fmt.Printf("add favorite failed: %v\n", err)
+			log.FieldLog("redis", "error", fmt.Sprintf("add favorite failed: %v", err))
 			return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 5, StatusMsg: "add favorite failed" + err.Error()})
 		}
 		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 0, StatusMsg: "add favorite success"})
 	} else {
 		if err := service.DeleteFavoriteVideo(uid, uint(vid)); err != nil {
-			fmt.Printf("delete favorite failed: %v\n", err)
+			log.FieldLog("redis", "error", fmt.Sprintf("delete favorite failed: %v", err))
 			return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 6, StatusMsg: "delete favorite failed" + err.Error()})
 		}
 		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 0, StatusMsg: "delete favorite success"})
@@ -66,19 +67,19 @@ func FavoriteList(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 5, StatusMsg: "redis videos get error" + err.Error()}})
 	}
 	if len(vids) == 0 {
-		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无点赞视频"},VideoList: []models.VideoInfo{}})}
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无点赞视频"}, VideoList: []models.VideoInfo{}})
+	}
 	videoInfos, err := service.GetVideoInfosByIds(vids)
 	if err != nil {
-		fmt.Printf("video infos get error: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 6, StatusMsg: "mysql video infos get error" + err.Error()}})
+		log.FieldLog("gorm", "error", fmt.Sprintf("Mysql videos get error:%v ", err))
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 6, StatusMsg: "mysql videos get error" + err.Error()}})
 	}
 
 	for i := 0; i < len(videoInfos); i++ {
 		videoInfos[i].IsFavorite = true
 	}
-	
-	return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: 
-		Response{StatusCode: 0},
+
+	return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 0},
 		VideoList: videoInfos,
 	})
 }

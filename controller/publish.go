@@ -4,9 +4,10 @@ import (
 	"douyin/models"
 	"douyin/service"
 	"douyin/utils/jwt"
+	"douyin/utils/log"
 	"douyin/utils/validator"
 	"fmt"
-	"log"
+
 	"net/http"
 	"strconv"
 
@@ -39,7 +40,11 @@ func Publish(c *fiber.Ctx) error {
 	title := c.FormValue("title")
 	data, err := c.FormFile("data")
 	if err != nil {
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1,StatusMsg:  err.Error()})
+		log.FieldLog("fiber", "error", fmt.Sprintf("handle file error: %v", err))
+		return c.Status(http.StatusOK).JSON(Response{
+			StatusCode: 1,
+			StatusMsg:  err.Error(),
+		})
 	}
 	videoUrl, coverUrl, err := service.UploadVideoToOSS(data)
 	if err != nil {
@@ -48,12 +53,13 @@ func Publish(c *fiber.Ctx) error {
 			StatusMsg:  err.Error(),
 		})
 	}
-	fmt.Printf("videoUrl:%v\n", videoUrl)
-	fmt.Printf("coverUrl:%v\n", coverUrl)
 
 	if err := service.CreateVideo(title, videoUrl, coverUrl, uid); err != nil {
-		log.Printf("Mysql create video error:%v", err)
-		return c.Status(http.StatusOK).JSON(Response{StatusCode: 1,StatusMsg:  err.Error()})
+		log.FieldLog("gorm", "error", fmt.Sprintf("Mysql create video error:%v", err))
+		return c.Status(http.StatusOK).JSON(Response{
+			StatusCode: 1,
+			StatusMsg:  err.Error(),
+		})
 	}
 
 	return c.Status(http.StatusOK).JSON(Response{
@@ -89,12 +95,21 @@ func PublishList(c *fiber.Ctx) error {
 		})
 	}
 
-	videoInfos, err := service.GetVideoInfosByIds(vids) 
+	videoInfos, err := service.GetVideoInfosByIds(vids)
 	if err != nil {
-		return c.Status(http.StatusOK).JSON(VideoListResponse{Response: Response{ StatusCode: 6, StatusMsg: "sql get video error"}})
+		return c.Status(http.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 6, StatusMsg: "sql get video error"}})
 	}
+	// 填充isfavorite信息
 	for i := 0; i < len(videoInfos); i++ {
-		service.GetVideoIsFavorite(&videoInfos[i], uid)
+		err = service.GetVideoIsFavorite(&videoInfos[i], uid)
+		if err != nil {
+			return c.Status(http.StatusOK).JSON(VideoListResponse{
+				Response: Response{
+					StatusCode: 2,
+					StatusMsg:  err.Error(),
+				},
+			})
+		}
 	}
 
 	return c.Status(http.StatusOK).JSON(VideoListResponse{

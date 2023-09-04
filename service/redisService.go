@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"douyin/models"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -42,7 +41,7 @@ func Init2Redis() error {
 	return nil
 }
 
-// 可以迁移到favorite service
+// InitFavorite2Redis 可以迁移到favorite service
 func InitFavorite2Redis() {
 	// 遍历favorite数据库
 	var favorites []models.Favorite
@@ -59,7 +58,7 @@ func InitFavorite2Redis() {
 	}
 }
 
-// 可以迁移到relation service
+// InitFollow2Redis 可以迁移到relation service
 func InitFollow2Redis() {
 	// 遍历relation表
 	var relations []models.Relation
@@ -91,7 +90,6 @@ func InitComment2Redis() {
 		vid := r.VideoID
 		cid := r.ID
 		// panic(cid)
-		fmt.Println(cid)
 		if cid > maxCid {
 			maxCid = cid
 		}

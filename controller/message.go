@@ -5,9 +5,9 @@ import (
 	"douyin/service"
 	"douyin/utils/jwt"
 	"douyin/utils/validator"
+	"github.com/gofiber/fiber/v2"
 	"net/http"
 	"strconv"
-	"github.com/gofiber/fiber/v2"
 )
 
 type MessageActionRequest struct {
@@ -76,15 +76,15 @@ func MessageChat(c *fiber.Ctx) error {
 	}
 	mids, err := service.GetMessagesIds(fromId, toId, &preMsgTime)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 5, StatusMsg: "redis get message error"},PreMsgTime: 1546926630,})
+		return c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 5, StatusMsg: "redis get message error"}, PreMsgTime: 1546926630})
 	}
 	if len(mids) == 0 {
-		c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 0, StatusMsg: "消息列表为空"},MessageList: []models.MessageInfo{},PreMsgTime: 1546926630,})
+		c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 0, StatusMsg: "消息列表为空"}, MessageList: []models.MessageInfo{}, PreMsgTime: 1546926630})
 	}
 	nextPreMsgTime := preMsgTime
 	messages, err := service.GetMessagesByIds(mids)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 6, StatusMsg: "sql get message error"}, PreMsgTime: 1546926630,})
+		return c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 6, StatusMsg: "sql get message error"}, PreMsgTime: 1546926630})
 	}
 	messageInfos := make([]models.MessageInfo, len(mids))
 	for i, m := range messages {

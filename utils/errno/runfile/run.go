@@ -58,9 +58,7 @@ func main() {
 	log.SetPrefix("[logusage]")
 	log.SetFlags(log.Ldate | log.Llongfile)
 	flag.Usage = Usage
-	fmt.Println("...")
 	flag.Parse()
-	fmt.Println()
 	if len(*typeNames) == 0 {
 		flag.Usage()
 		os.Exit(2)
