@@ -24,7 +24,7 @@ func AddMessage(toId uint, fromId uint, content string) error {
 		return err
 	}
 	key := GenerateMessageKey(message.FromUserID, message.ToUserID)
-	models.RedisClient.ZAdd(RedisCtx, SOCIAL_MESSAGE_KEY+key, &redis.Z{Score: float64(message.CreateTime.UnixMilli()), Member: message.ID})
+	models.RedisClient.ZAdd(RedisCtx, SOCIAL_MESSAGE_KEY+key, &redis.Z{Score: float64(message.CreatedAt.UnixMilli()), Member: message.ID})
 	return nil
 }
 
