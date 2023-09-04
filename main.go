@@ -2,7 +2,7 @@ package main
 
 import (
 	"douyin/bootstrap"
-	"douyin/utils/log"
+	"log"
 )
 
 func main() {
@@ -17,12 +17,12 @@ func main() {
 
 	app, err := bootstrap.Init()
 	if err != nil {
-		log.FieldLog("init", "panic", "project init error")
+		log.Println(err)
 		return
 	}
 
 	err = app.Listen(":8080")
 	if err != nil {
-		log.FieldLog("listen", "panic", "project listen error")
+		return
 	}
 }

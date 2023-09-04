@@ -6,30 +6,28 @@ import (
 	"douyin/models"
 	"douyin/service"
 	"douyin/utils/jwt"
-	"douyin/utils/log"
 	"douyin/utils/validator"
 
-	"douyin/middleware/rabbitmq"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"douyin/middleware/rabbitmq"
 )
 
 func Init() (*fiber.App, error) {
-	log.Init()
 	err := config.InitConfig()
 	if err != nil {
 		return nil, err
 	}
-	if err = models.InitDB(); err != nil {
+	if err := models.InitDB(); err != nil {
 		return nil, err
 	}
-	if err = models.InitRedis(); err != nil {
+	if err := models.InitRedis(); err != nil {
 		return nil, err
 	}
-	if err = service.InitOSS(); err != nil {
-		return nil, err
-	}
-	if err = service.Init2Redis(); err != nil {
+	// if err := service.InitOSS(); err != nil {
+	// 	return nil, err
+	// }
+	if err := service.Init2Redis(); err != nil {
 		return nil, err
 	}
 	jwt.InitJWT()

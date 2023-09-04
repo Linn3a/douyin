@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"douyin/utils/log"
 	"fmt"
 	"reflect"
 	"strings"
@@ -12,8 +11,8 @@ import (
 var RequiredIf validator.Func = func(fl validator.FieldLevel) bool {
 
 	/* 用法示例
-	Type        string	`json:"type" validate:"required,oneof=flat_off percent_off"`
-	MaxValue	uint	`json:"max_value" validate:"required_if=Type percent_off"`
+		Type        string	`json:"type" validate:"required,oneof=flat_off percent_off"`
+		MaxValue	uint	`json:"max_value" validate:"required_if=Type percent_off"`
 	*/
 
 	otherFieldName := strings.Split(fl.Param(), " ")[0]
@@ -25,7 +24,7 @@ var RequiredIf validator.Func = func(fl validator.FieldLevel) bool {
 	} else {
 		otherFieldVal = fl.Parent().FieldByName(otherFieldName)
 	}
-	log.FieldLog("validator", "otherFieldVal", fmt.Sprintf("other filed name=%s, other filed value=%v\n value check=%v\n", otherFieldName, otherFieldVal, otherFieldValCheck))
+	fmt.Printf("other filed name=%s, other filed value=%v\n value check=%v\n", otherFieldName, otherFieldVal, otherFieldValCheck)
 
 	if otherFieldValCheck == otherFieldVal.String() {
 		return !isNilOrZeroValue(fl.Field())

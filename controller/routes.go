@@ -1,15 +1,16 @@
 package controller
 
 import (
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
+	"log"
 	"os"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2"
 )
 
 func RegisterRoutes(app *fiber.App) {
+	log.Println("init router")
 	// public directory is used to serve static resources
 	app.Static("/static", "./public")
-
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendFile("./templates/index.html")
 	})

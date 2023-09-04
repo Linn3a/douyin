@@ -3,7 +3,6 @@ package models
 import (
 	"context"
 	"douyin/config"
-	"douyin/utils/log"
 	"fmt"
 	// "time"
 
@@ -49,20 +48,20 @@ func InitDB() error {
 var RedisClient *redis.Client
 
 func InitRedis() error {
-	log.FieldLog("redis", "info", "connect Redis")
+	fmt.Println("connect Redis ...")
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr: config.GlobalConfig.Redis.Address,
-		//Password: config.GlobalConfig.Redis.Password,
-		DB: config.GlobalConfig.Redis.DB,
+		Addr:     config.GlobalConfig.Redis.Address,
+		Password: config.GlobalConfig.Redis.Password,
+		DB:       config.GlobalConfig.Redis.DB,
 		//超时
 		// ReadTimeout:  time.Duration(config.GlobalConfig.Redis.ReadTimeout) * time.Second,
 		// WriteTimeout: time.Duration(config.GlobalConfig.Redis.WriteTimeout) * time.Second,
 		// PoolTimeout:  time.Duration(config.GlobalConfig.Redis.PoolTimeout) * time.Second,
 	})
 	if _, err := RedisClient.Ping(context.Background()).Result(); err != nil {
-		log.FieldLog("redis", "error", fmt.Sprintf("connect Redis failed: %v", err))
+		fmt.Println("connect Redis failed")
 		return err
 	}
-	log.FieldLog("redis", "info", "connect Redis success")
+	fmt.Println("connect Redis success")
 	return nil
 }

@@ -1,26 +1,25 @@
 package service
 
 import (
-	"douyin/middleware/rabbitmq"
 	"douyin/models"
-	"douyin/utils/log"
-
 	// "errors"
 	// "gorm.io/gorm"
 	"fmt"
-	"strconv"
 	"strings"
+	"strconv"
+	"douyin/middleware/rabbitmq"
+
 )
 
 const USER_TABLE_NAME = "users"
 const RELATION_TABLE_NAME = "user_follows"
 
+
 // redis 查询优化
 func GetUserFollowCount(u *models.UserInfo) error {
 	followCount, err := models.RedisClient.SCard(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(u.ID))).Result()
 	if err != nil {
-		log.FieldLog("redis", "error", fmt.Sprintf("check user following count error: %v", err))
-		return fmt.Errorf("check user following count error: %v", err)
+		return fmt.Errorf("social following set check error: %v", err)
 	}
 	u.FollowCount = followCount
 	return nil
@@ -29,24 +28,24 @@ func GetUserFollowCount(u *models.UserInfo) error {
 func GetUserFollowerCount(u *models.UserInfo) error {
 	followerCount, err := models.RedisClient.SCard(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(u.ID))).Result()
 	if err != nil {
-		log.FieldLog("redis", "error", fmt.Sprintf("check user follower count error: %v", err))
-		return fmt.Errorf("check user follower count error: %v", err)
+		return fmt.Errorf("social following set check error: %v", err)
 	}
 	u.FollowerCount = followerCount
 	return nil
 }
 
-func GetUserIsFollow(u *models.UserInfo, fromId uint) error {
-	isFollowed, err := models.RedisClient.SIsMember(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(fromId)), u.ID).Result()
+func GetUserIsFollow(u *models.UserInfo, from_id uint) error {
+	isFollowed, err := models.RedisClient.SIsMember(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(from_id)), u.ID).Result()
 	if err != nil {
-		log.FieldLog("redis", "error", fmt.Sprintf("check is followed error: %v", err))
-		return fmt.Errorf("check is followed error: %v", err)
+		return fmt.Errorf("social following set check error: %v", err)
 	}
 	u.IsFollow = isFollowed
 	return nil
 }
 
 //---------------------------------
+
+
 
 // FollowAction 关注操作
 func FollowAction(fromId uint, toId uint) error {
@@ -56,13 +55,14 @@ func FollowAction(fromId uint, toId uint) error {
 	sb.WriteString(" ")
 	sb.WriteString(strconv.Itoa(int(toId)))
 	rabbitmq.RmqFollowAdd.Publish(sb.String())
-	log.FieldLog("followMQ", "info", fmt.Sprintf("successfully add follow: %v", sb.String()))
+	fmt.Println("关注消息入队成功")
 	models.RedisClient.SAdd(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(fromId)), toId)
 	models.RedisClient.SAdd(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(toId)), fromId)
 	return nil
 }
 
-func CancelAction(fromId uint, toId uint) error {
+
+func CancleAction(fromId uint,toId uint)error{
 	// 取关消息加入消息列表
 	sb := strings.Builder{}
 	sb.WriteString(strconv.Itoa(int(fromId)))
@@ -70,7 +70,7 @@ func CancelAction(fromId uint, toId uint) error {
 	sb.WriteString(strconv.Itoa(int(toId)))
 	rabbitmq.RmqFollowDel.Publish(sb.String())
 	// 记录日志
-	//fmt.Println("取关消息入队成功")
+	fmt.Println("取关消息入队成功")
 	models.RedisClient.SRem(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(fromId)), toId)
 	models.RedisClient.SRem(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(toId)), fromId)
 	return nil
@@ -102,10 +102,10 @@ func GetFriendIds(fromId uint) ([]uint, error) {
 	var searchList []string
 	var searchKey string
 	// 如果是大V
-	if len(toIdsStr) < len(fromIdsStr) {
+	if len(toIdsStr) < len(fromIdsStr){
 		searchList = toIdsStr
 		searchKey = SOCIAL_FOLLOWING_KEY
-		// 如果是普通用户
+	// 如果是普通用户
 	} else {
 		searchList = fromIdsStr
 		searchKey = SOCIAL_FOLLOWER_KEY
@@ -128,10 +128,10 @@ func HasRelation(fromId uint, toId uint) bool {
 	var cnt int64
 	if err := models.DB.Table("user_follows").
 		Where("follower_id = ? AND followed_id = ?", fromId, toId).Find(&tmp).Count(&cnt).
-		Error; err != nil { //没有该条记录
+		Error; err != nil{ //没有该条记录
 		return false
 	}
-	if cnt == 0 {
+	if cnt == 0{
 		return false
 	}
 	return true
@@ -141,12 +141,12 @@ func HasRelation(fromId uint, toId uint) bool {
 func CreateRelation(fromId uint, toId uint) error {
 
 	relation := models.Relation{
-		FollowedId: toId,
+		FollowedId:   toId,
 		FollowerId: fromId,
 	}
-
+	
 	if err := models.DB.Table("user_follows").Create(&relation).Error; err != nil { //创建记录
-		return err
+			return err
 	}
 	return nil
 }
@@ -155,11 +155,11 @@ func CreateRelation(fromId uint, toId uint) error {
 func DeleteRelation(fromId uint, toId uint) error {
 
 	relation := models.Relation{
-		FollowedId: toId,
+		FollowedId:   toId,
 		FollowerId: fromId,
 	}
-	if HasRelation(fromId, toId) {
-		err := models.DB.Table("user_follows").Delete(models.Relation{}, &relation).Error
+	if HasRelation(fromId,toId){
+		err := models.DB.Table("user_follows").Delete(models.Relation{},&relation).Error
 		return err
 	}
 	return nil
@@ -175,15 +175,15 @@ func FollowList(Id uint) ([]models.UserInfo, error) {
 		Joins("left join "+RELATION_TABLE_NAME+" on "+USER_TABLE_NAME+".id = "+RELATION_TABLE_NAME+".followed_id").
 		Where(RELATION_TABLE_NAME+".follower_id=?", Id).
 		Scan(&userList).Error; err == nil {
-		// TODO: add info from other service
-		userInfoList := make([]models.UserInfo, len(userList))
-		for i, u := range userList {
-			userInfoList[i] = GenerateUserInfo(&u)
-			userInfoList[i].IsFollow = true
-		}
+			// TODO: add info from other service
+			userInfoList := make([]models.UserInfo,len(userList))
+			for i,u :=range userList{
+				userInfoList[i] = GenerateUserInfo(&u)
+				userInfoList[i].IsFollow = true
+			}
 		return userInfoList, nil
-	} else {
-		return userInfoList, err
+	}else{
+		return userInfoList,err
 	}
 
 }
@@ -197,24 +197,24 @@ func FollowerList(Id uint) ([]models.UserInfo, error) {
 		Joins("left join "+RELATION_TABLE_NAME+" on "+USER_TABLE_NAME+".id = "+RELATION_TABLE_NAME+".follower_id").
 		Where(RELATION_TABLE_NAME+".followed_id=?", Id).
 		Scan(&userList).Error; err == nil {
-		// TODO: add info from other service
-		userInfoList := make([]models.UserInfo, len(userList))
-		for i, u := range userList {
-			userInfoList[i] = GenerateUserInfo(&u)
-			userInfoList[i].IsFollow = HasRelation(Id, u.ID)
-		}
+			// TODO: add info from other service
+			userInfoList := make([]models.UserInfo,len(userList))
+			for i,u :=range userList{
+				userInfoList[i] = GenerateUserInfo(&u)
+				userInfoList[i].IsFollow = HasRelation(Id,u.ID)
+			}
 		return userInfoList, nil
-	} else {
+	}else{
 		return userInfoList, err
 	}
-
+	
 }
 
 // FriendList 获取朋友列表（互相关注）
 func FriendList(Id uint) ([]models.UserInfo, error) {
 	var friendList []models.UserInfo
 	// 查询 Id 的粉丝列表
-	// 检查 粉丝列表中的用户是否Id也关注
+	// 检查 粉丝列表中的用户是否Id也关注 
 	followerList, err := FollowerList(Id)
 	if err != nil {
 		return friendList, err
@@ -228,28 +228,29 @@ func FriendList(Id uint) ([]models.UserInfo, error) {
 	}
 }
 
-// 获取User的关注总数
-func GetFollowCnt(Id uint) (int64, error) {
+//获取User的关注总数
+func GetFollowCnt(Id uint)(int64,error){
 	var cnt int64
 	if err := models.DB.
 		Table("user_follows").
 		Where("follower_id=?", Id).
 		Count(&cnt).Error; err != nil {
-		return 0, err
+			fmt.Println("cnt:",cnt)
+		return 0,err
 	}
-	return cnt, nil
+	return cnt,nil
 
 }
-
-// 获取User的粉丝总数
-func GetFollowerCnt(Id uint) (int64, error) {
+//获取User的粉丝总数
+func GetFollowerCnt(Id uint)(int64,error){
 	var cnt int64
 	if err := models.DB.
 		Table("user_follows").
 		Where("followed_id=?", Id).
 		Count(&cnt).Error; err != nil {
-		return 0, err
+			fmt.Println("cnt:",cnt)
+		return 0,err
 	}
-	return cnt, nil
+	return cnt,nil
 
 }

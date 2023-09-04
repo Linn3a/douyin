@@ -1,7 +1,6 @@
 package jwt
 
 import (
-	"douyin/utils/log"
 	"fmt"
 
 	"github.com/dgrijalva/jwt-go"
@@ -52,7 +51,7 @@ func (j *JWT) AuthTokenValid(c *fiber.Ctx, resp BaseResponse, uid *uint, request
 		return j.signingKey, nil
 	})
 	if err != nil {
-		log.FieldLog("jwt", "error", fmt.Sprintf("token invalid: %v", err))
+		fmt.Printf("token invalid: %v\n", err)
 		resp.Set(3, "token invalid")
 		return fmt.Errorf("token invalid: %v", err), c.Status(fiber.StatusOK).JSON(resp)
 	}
@@ -65,14 +64,15 @@ func (j *JWT) AuthCurUser(c *fiber.Ctx, resp BaseResponse, requestToken string, 
 		return j.signingKey, nil
 	})
 	if err != nil {
-		log.FieldLog("jwt", "error", fmt.Sprintf("token invalid: %v", err))
+		fmt.Printf("token invalid: %v\n", err)
 		resp.Set(3, "token invalid")
 		return fmt.Errorf("token invalid: %v", err), c.Status(fiber.StatusOK).JSON(resp)
 	}
 	user_id := (*parseTokenMap(token)).ID
-
+	fmt.Print(user_id, uid)
 	if user_id != uid {
-		log.FieldLog("jwt", "error", fmt.Sprintf("unauthorized: %v", err))
+		fmt.Print(user_id, uid)
+		fmt.Printf("unauthorized: %v\n", err)
 		resp.Set(4, "unauthorized")
 		return fmt.Errorf("unauthorized: %v", err), c.Status(fiber.StatusOK).JSON(resp)
 	}

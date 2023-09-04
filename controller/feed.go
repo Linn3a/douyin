@@ -32,41 +32,30 @@ func Feed(c *fiber.Ctx) error {
 
 	vids, err := service.GetFeedVideoIds(&latestTime)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(FeedResponse{Response: Response{StatusCode: 1, StatusMsg: "redis get videos error: " + err.Error()}})
+		return c.Status(fiber.StatusOK).JSON(FeedResponse{
+			Response: Response{StatusCode: 1, StatusMsg: err.Error()},
+		})
 	}
-	if len(vids) == 0 {
-		return c.Status(fiber.StatusOK).JSON(FeedResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无发布视频"}, VideoList: []models.VideoInfo{}})
-	}
-
 	nextTime := latestTime
 	videoInfos, err := service.GetVideoInfosByIds(vids)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(FeedResponse{Response: Response{StatusCode: 2, StatusMsg: "sql get videoinfos error: " + err.Error()}})
+		return c.Status(fiber.StatusOK).JSON(FeedResponse{
+			Response: Response{StatusCode: 2, StatusMsg: err.Error()},
+		})
 	}
 	token := c.Query("token")
 	var uid uint
-	if err, _ = jwt.JwtClient.AuthTokenValid(c, &Response{}, &uid, token); err == nil {
+	if err, _ := jwt.JwtClient.AuthTokenValid(c, &Response{}, &uid, token); err == nil {
 		// 如果登陆 填充video favorite信息
 		// 如果登陆 填充author follow信息
 		for i := 0; i < len(videoInfos); i++ {
-			err = service.GetVideoIsFavorite(&videoInfos[i], uid)
-			if err != nil {
-				return c.Status(fiber.StatusOK).JSON(FeedResponse{
-					Response: Response{StatusCode: 2, StatusMsg: err.Error()},
-				})
-			}
-			err = service.GetUserIsFollow(videoInfos[i].Author, uid)
-			if err != nil {
-				return c.Status(fiber.StatusOK).JSON(FeedResponse{
-					Response: Response{StatusCode: 2, StatusMsg: err.Error()},
-				})
-			}
+			service.GetVideoIsFavorite(&videoInfos[i], uid)
+			service.GetUserIsFollow(videoInfos[i].Author, uid)
 		}
 	}
-
 	return c.Status(fiber.StatusOK).JSON(FeedResponse{
 		Response:  Response{StatusCode: 0, StatusMsg: err.Error()},
 		VideoList: videoInfos,
-		NextTime:  nextTime,
+		NextTime: nextTime,
 	})
 }

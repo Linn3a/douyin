@@ -2,7 +2,6 @@ package service
 
 import (
 	"douyin/models"
-	"douyin/utils/log"
 	"fmt"
 	"strconv"
 
@@ -55,21 +54,21 @@ func GenerateVideoInfo(v *models.Video) models.VideoInfo {
 func GetVideoInfoById(vid uint) (models.VideoInfo, error) {
 	video, err := GetVideoById(vid)
 	if err != nil {
-		log.FieldLog("gorm", "error", fmt.Sprintf("get video info by id failed: %v", err))
+		fmt.Printf("%v\n", err)
 		return models.VideoInfo{}, err
 	}
 	videoInfo := GenerateVideoInfo(&video)
-	authorInfo, err := GetUserInfoById(video.AuthorID)
+	authorInfo, err := GetUserInfoById(video.AuthorID) 
 	if err != nil {
-		log.FieldLog("gorm", "error", fmt.Sprintf("get user info by id failed: %v", err))
+		fmt.Printf("%v\n", err)
 		return models.VideoInfo{}, err
 	}
-	if err = GetVideoFavoriteCount(&videoInfo); err != nil {
-		log.FieldLog("gorm", "error", fmt.Sprintf("get video favorite count error: %v", err))
+	if err := GetVideoFavoriteCount(&videoInfo); err != nil {
+		fmt.Printf("%v\n", err)
 		return models.VideoInfo{}, err
 	}
 	if err = GetVideoCommentCount(&videoInfo); err != nil {
-		log.FieldLog("gorm", "error", fmt.Sprintf("get video comment count error: %v", err))
+		fmt.Printf("%v\n", err)
 		return models.VideoInfo{}, err
 	}
 	videoInfo.Author = &authorInfo
@@ -80,7 +79,7 @@ func GetVideoInfosByIds(vids []uint) ([]models.VideoInfo, error) {
 	videoInfos := make([]models.VideoInfo, len(vids))
 	videos, err := GetVideosByIds(vids)
 	if err != nil {
-		log.FieldLog("gorm", "error", "get video info by id failed")
+		fmt.Printf("%v\n", err)
 		return videoInfos, err
 	}
 	authorIds := make([]uint, len(vids))
@@ -96,11 +95,11 @@ func GetVideoInfosByIds(vids []uint) ([]models.VideoInfo, error) {
 
 	for i := 0; i < len(videoInfos); i++ {
 		if err := GetVideoFavoriteCount(&videoInfos[i]); err != nil {
-			log.FieldLog("gorm", "error", fmt.Sprintf("get video favorite count error: %v", err))
+			fmt.Printf("%v\n", err)
 			return videoInfos, err
 		}
 		if err := GetVideoCommentCount(&videoInfos[i]); err != nil {
-			log.FieldLog("gorm", "error", fmt.Sprintf("get video comment count error: %v", err))
+			fmt.Printf("%v\n", err)
 			return videoInfos, err
 		}
 		authorInfo := authorInfos[videos[i].AuthorID]
@@ -117,12 +116,7 @@ func GetFeedVideoIds(latest_time *int64) ([]uint, error) {
 		Count: MaxVideoNum,
 	}).Result()
 	if err != nil {
-		log.FieldLog("redis", "error", "get video feed ids failed")
 		return []uint{}, err
-	}
-
-	if len(zVids) == 0 {
-		return []uint{}, nil
 	}
 	*latest_time = int64(zVids[len(zVids)-1].Score)
 	vids := make([]uint, len(zVids))

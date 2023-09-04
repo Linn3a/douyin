@@ -59,7 +59,7 @@ func RelationAction(c *fiber.Ctx) error {
 	if actionType == 1 {
 		err = service.FollowAction(fromId, toId)
 	} else {
-		err = service.CancelAction(fromId, toId)
+		err = service.CancleAction(fromId, toId)
 	}
 	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: err.Error()})
@@ -84,9 +84,6 @@ func FollowList(c *fiber.Ctx) error {
 	followingIds, err := service.GetFollowingIds(uid)
 	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 5, StatusMsg: "redis user get error: " + err.Error()}})
-	}
-	if len(followingIds) == 0 {
-		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无关注用户"}, UserList: []models.UserInfo{}})
 	}
 	followingInfos, err := service.GetUserInfosByIds(followingIds)
 	if err != nil {
@@ -117,20 +114,21 @@ func FollowerList(c *fiber.Ctx) error {
 		return httpErr
 	}
 
-	followerIds, _ := service.GetFollowerIds(uid)
-	if len(followerIds) == 0 {
-		return c.Status(fiber.StatusOK).JSON(UserListResponse{
-			Response: Response{StatusCode: 0, StatusMsg: "暂无粉丝"}, UserList: []models.UserInfo{}})
-	}
+	// tmpFollowerList, err := service.FollowerList(uid)
+	// fmt.Println(tmpFollowerList)
+	followerIds, _ := service.GetFollowingIds(uid)
 	followerInfos, err := service.GetUserInfosByIds(followerIds)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 5, StatusMsg: "查询粉丝列表失败"}})
+		return c.Status(fiber.StatusOK).JSON(UserListResponse{
+			Response: Response{
+				StatusCode: 1,
+				StatusMsg:  "查询粉丝列表失败",
+			},
+			UserList: nil,
+		})
 	}
 	for i := 0; i < len(followerIds); i++ {
-		err = service.GetUserIsFollow(&followerInfos[i], uid)
-		if err != nil {
-			return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 6, StatusMsg: "查询粉丝列表失败"}})
-		}
+		service.GetUserIsFollow(&followerInfos[i], uid)
 	}
 	return c.Status(fiber.StatusOK).JSON(UserListResponse{
 		Response: Response{
@@ -155,14 +153,11 @@ func FriendList(c *fiber.Ctx) error {
 
 	friendIds, err := service.GetFriendIds(uid)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 5, StatusMsg: "redis 查询好友列表失败"}})
-	}
-	if len(friendIds) == 0 {
-		return c.Status(fiber.StatusOK).JSON(FriendListResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无好友"}, UserList: []FriendInfo{}})
+		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 5, StatusMsg:  "redis 查询好友列表失败",},UserList: nil,})
 	}
 	friendInfos, err := service.GetUserInfosByIds(friendIds)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 6, StatusMsg: "查询好友列表失败"}})
+		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 6, StatusMsg:  "查询好友列表失败",},UserList: nil,})
 	}
 	friendList := make([]FriendInfo, len(friendIds))
 	for i, friendInfo := range friendInfos {

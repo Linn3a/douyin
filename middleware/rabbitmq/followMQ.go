@@ -1,20 +1,20 @@
 package rabbitmq
 
-import (
-	"douyin/models"
-	"douyin/utils/log"
-	"fmt"
+import(
 	"github.com/streadway/amqp"
-	"strconv"
+	"log"
+	"fmt"
 	"strings"
+	"strconv"
+	"douyin/models"
 )
 
 type FollowMQ struct {
 	RabbitMQ
 	channel   *amqp.Channel
-	queueName string //队列名称
-	exchange  string //交换机
-	key       string //routing Key
+	queueName string	//队列名称
+	exchange  string	//交换机
+	key       string	//routing Key
 }
 
 // NewFollowRabbitMQ 获取followMQ的对应队列。
@@ -49,22 +49,23 @@ func InitFollowRabbitMQ() {
 	go RmqFollowDel.Consumer()
 }
 
+
 // Publish生产者  follow关系的发布配置。
 func (f *FollowMQ) Publish(message string) {
 	//1、声明队列
 	_, err := f.channel.QueueDeclare(
 		f.queueName, // 队列名
-		false,       //是否持久化
-		false,       //是否为自动删除
-		false,       //是否具有排他性
-		false,       //是否阻塞
-		nil,         //额外属性
+		false,	//是否持久化
+		false,	//是否为自动删除
+		false,	//是否具有排他性
+		false,	//是否阻塞
+		nil,	//额外属性
 	)
 	if err != nil {
 		panic(fmt.Sprintf("%s:%s\n", err, "声明关注队列失败"))
 	}
 	//2、发送消息
-	err1 := f.channel.Publish(
+	err1 :=f.channel.Publish(
 		f.exchange,
 		f.queueName,
 		false,
@@ -89,12 +90,12 @@ func (f *FollowMQ) Consumer() {
 
 	//2、从队列接收消息
 	msgs, err := f.channel.Consume(
-		f.queueName, //队列名
-		"",          //消费者名，用来区分多个消费者，以实现公平分发或均等分发策略
-		true,        //是否自动应答
-		false,       //是否具有排他性
-		false,       //是否接收同一个连接中的消息，若为true，则只能接收别的conn中发送的消息
-		false,       //消息队列是否阻塞
+		f.queueName,	//队列名
+		"",			//消费者名，用来区分多个消费者，以实现公平分发或均等分发策略
+		true,		//是否自动应答
+		false,		//是否具有排他性
+		false,		//是否接收同一个连接中的消息，若为true，则只能接收别的conn中发送的消息
+		false,		//消息队列是否阻塞
 		nil,
 	)
 	if err != nil {
@@ -110,7 +111,7 @@ func (f *FollowMQ) Consumer() {
 
 	}
 
-	log.FieldLog("followMQ", "info", "follow consumer start")
+	log.Printf("[*] Waiting for messagees,To exit press CTRL+C")
 
 	<-forever
 
@@ -124,14 +125,14 @@ func (f *FollowMQ) consumerFollowAdd(msgs <-chan amqp.Delivery) {
 		fromId, _ := strconv.Atoi(params[0])
 		toId, _ := strconv.Atoi(params[1])
 		// 日志记录。
-		log.FieldLog("followMQ", "info", fmt.Sprintf("CALL FollowAction(%v,%v)", fromId, toId))
+		fmt.Printf("CALL FollowAction(%v,%v)", fromId,toId)
 		//执行FollowAction关注操作
 		relation := models.Relation{
-			FollowedId: uint(toId),
+			FollowedId:   uint(toId),
 			FollowerId: uint(fromId),
 		}
 		if err := models.DB.Table("user_follows").Create(&relation).Error; err != nil { //创建记录
-			log.FieldLog("gorm", "error", fmt.Sprintf("create follow relation failed: %v", err))
+			fmt.Println(err) 
 		}
 	}
 }
@@ -144,14 +145,14 @@ func (f *FollowMQ) consumerFollowDel(msgs <-chan amqp.Delivery) {
 		fromId, _ := strconv.Atoi(params[0])
 		toId, _ := strconv.Atoi(params[1])
 		// 日志记录。
-		log.FieldLog("followMQ", "info", fmt.Sprintf("CALL delFollowRelation(%v,%v)", fromId, toId))
+		fmt.Printf("CALL delFollowRelation(%v,%v)", fromId, toId)
 		user1 := models.User{}
 		user1.ID = uint(fromId)
 		user2 := models.User{}
 		user2.ID = uint(toId)
 		err := models.DB.Model(&user2).Association("Follow").Delete(user1)
-		if err != nil {
-			log.FieldLog("gorm", "error", fmt.Sprintf("delFollowRelation(%v,%v) failed: %v", fromId, toId, err))
-		}
+		fmt.Println(err) 
 	}
 }
+
+
