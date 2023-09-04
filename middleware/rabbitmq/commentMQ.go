@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
-
+	// "strings"
+	"encoding/json"
 	"github.com/streadway/amqp"
-	"gorm.io/gorm"
+	// "gorm.io/gorm"
 )
 
 type CommentMQ struct {
@@ -114,22 +114,28 @@ func (l *CommentMQ) Consumer() {
 func (l *CommentMQ) consumerCommentAdd(messages <-chan amqp.Delivery) {
 	for d := range messages {
 		// 参数解析。
-		params := strings.Split(fmt.Sprintf("%s", d.Body), " ")
-		Id, _ := strconv.Atoi(params[0])
-		text := params[1]
-		userId, _ := strconv.Atoi(params[2])
-		videoId, _ := strconv.Atoi(params[3])
-
-		comment := models.Comment{
-			Model: gorm.Model{
-				ID: uint(Id),
-			},
-			UserId:  uint(userId),
-			VideoId: uint(videoId),
-			Content: text,
+		// params := strings.Split(fmt.Sprintf("%s", d.Body), " ")
+		comment := models.Comment{}
+		err := json.Unmarshal([]byte(d.Body),&comment)
+		if err != nil{
+			fmt.Println(err)
 		}
+		fmt.Println(comment)
+		// Id, _ := strconv.Atoi(params[0])
+		// text := params[1]
+		// userId, _ := strconv.Atoi(params[2])
+		// videoId, _ := strconv.Atoi(params[3])
 
-		err := models.DB.Create(&comment).Error
+		// comment := models.Comment{
+		// 	Model: gorm.Model{
+		// 		ID: uint(Id),
+		// 	},
+		// 	UserId:  uint(userId),
+		// 	VideoId: uint(videoId),
+		// 	Content: text,
+		// }
+
+		err = models.DB.Create(&comment).Error
 		if err!=nil {fmt.Println(err) }
 	
 	}

@@ -122,8 +122,8 @@ func (f *FollowMQ) consumerFollowAdd(msgs <-chan amqp.Delivery) {
 	for d := range msgs {
 		// 参数解析。
 		params := strings.Split(fmt.Sprintf("%s", d.Body), " ")
-		toId, _ := strconv.Atoi(params[0])
-		fromId, _ := strconv.Atoi(params[1])
+		fromId, _ := strconv.Atoi(params[0])
+		toId, _ := strconv.Atoi(params[1])
 		// 日志记录。
 		fmt.Printf("CALL FollowAction(%v,%v)", fromId,toId)
 		//执行FollowAction关注操作
@@ -150,7 +150,7 @@ func (f *FollowMQ) consumerFollowDel(msgs <-chan amqp.Delivery) {
 		user1.ID = uint(fromId)
 		user2 := models.User{}
 		user2.ID = uint(toId)
-		err := models.DB.Model(&user1).Association("Follow").Delete(user2)
+		err := models.DB.Model(&user2).Association("Follow").Delete(user1)
 		fmt.Println(err) 
 	}
 }
