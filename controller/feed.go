@@ -32,16 +32,15 @@ func Feed(c *fiber.Ctx) error {
 
 	vids, err := service.GetFeedVideoIds(&latestTime)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(FeedResponse{
-			Response: Response{StatusCode: 1, StatusMsg: err.Error()},
-		})
+		return c.Status(fiber.StatusOK).JSON(FeedResponse{Response: Response{StatusCode: 1, StatusMsg: "redis get videos error: " + err.Error()}})
+	}
+	if len(vids) == 0 {
+		return c.Status(fiber.StatusOK).JSON(FeedResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无发布视频",}, VideoList: []models.VideoInfo{}})
 	}
 	nextTime := latestTime
 	videoInfos, err := service.GetVideoInfosByIds(vids)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(FeedResponse{
-			Response: Response{StatusCode: 2, StatusMsg: err.Error()},
-		})
+		return c.Status(fiber.StatusOK).JSON(FeedResponse{Response: Response{StatusCode: 2, StatusMsg: "sql get videoinfos error: " + err.Error()},})
 	}
 	token := c.Query("token")
 	var uid uint

@@ -70,6 +70,10 @@ func GetFavoriteVideoIds(uid uint) ([]uint, error) {
 
 // audience2video
 func AddFavoriteVideo(uid uint, vid uint) error {
+	if uid == 0 {
+		fmt.Println("favorite action from unauthorized user, ignore")
+		return nil
+	}
 	if err := models.RedisClient.SAdd(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err(); err != nil {
 		return err
 	}

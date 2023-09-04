@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"douyin/models"
 	"douyin/service"
 	"douyin/utils/jwt"
 	"douyin/utils/validator"
@@ -64,10 +65,12 @@ func FavoriteList(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 5, StatusMsg: "redis videos get error" + err.Error()}})
 	}
+	if len(vids) == 0 {
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无点赞视频"},VideoList: []models.VideoInfo{}})}
 	videoInfos, err := service.GetVideoInfosByIds(vids)
 	if err != nil {
 		fmt.Printf("video infos get error: %v\n", err)
-		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 6, StatusMsg: "mysql videos get error" + err.Error()}})
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 6, StatusMsg: "mysql video infos get error" + err.Error()}})
 	}
 
 	for i := 0; i < len(videoInfos); i++ {
