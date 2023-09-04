@@ -1,6 +1,7 @@
 package config
 
 import (
+	"douyin/utils/log"
 	"fmt"
 	"github.com/spf13/viper"
 )
@@ -8,9 +9,8 @@ import (
 type Config struct {
 	App      App      `mapstructure:"app" json:"app" yaml:"app"`
 	Database Database `mapstructure:"database" json:"database" yaml:"database"`
-	Redis 	Redis 		`mapstructure:"redis" json:"redis" yaml:"redis"`
+	Redis    Redis    `mapstructure:"redis" json:"redis" yaml:"redis"`
 	Rabbitmq Rabbitmq `mapstructure:"rabbitmq" json:"rabbitmq" yaml:"rabbitmq"`
-
 }
 type App struct {
 	Env     string `mapstructure:"env" json:"env" yaml:"env"`
@@ -20,11 +20,10 @@ type App struct {
 }
 type Rabbitmq struct {
 	Host     string `mapstructure:"host" json:"host" yaml:"host"`
-	Port     int `mapstructure:"port" json:"port" yaml:"port"`
+	Port     int    `mapstructure:"port" json:"port" yaml:"port"`
 	Username string `mapstructure:"username" json:"username" yaml:"username"`
 	Password string `mapstructure:"password" json:"password" yaml:"password"`
 }
-
 
 var GlobalConfig Config
 
@@ -38,12 +37,9 @@ func InitConfig() error {
 	}
 
 	if err := v.Unmarshal(&GlobalConfig); err != nil {
-		fmt.Println(err)
+		log.FieldLog("viper", "error", "unmarshal config failed")
 		return err
 	}
-	fmt.Printf("%+v", GlobalConfig)
-	fmt.Printf(GlobalConfig.App.Env)
-	fmt.Printf(GlobalConfig.App.Port)
-	fmt.Printf("%v", GlobalConfig.Database)
+	log.FieldLog("viper", "info", fmt.Sprintf("init config success:%+v", GlobalConfig))
 	return nil
 }
