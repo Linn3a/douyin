@@ -2,6 +2,7 @@ package service
 
 import (
 	"douyin/models"
+	"douyin/utils/log"
 	"fmt"
 	"strconv"
 
@@ -58,7 +59,7 @@ func GetVideoInfoById(vid uint) (models.VideoInfo, error) {
 		return models.VideoInfo{}, err
 	}
 	videoInfo := GenerateVideoInfo(&video)
-	authorInfo, err := GetUserInfoById(video.AuthorID) 
+	authorInfo, err := GetUserInfoById(video.AuthorID)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return models.VideoInfo{}, err
@@ -79,6 +80,7 @@ func GetVideoInfosByIds(vids []uint) ([]models.VideoInfo, error) {
 	videoInfos := make([]models.VideoInfo, len(vids))
 	videos, err := GetVideosByIds(vids)
 	if err != nil {
+		log.FieldLog("gorm", "error", "get video info by id failed")
 		fmt.Printf("%v\n", err)
 		return videoInfos, err
 	}
@@ -116,8 +118,10 @@ func GetFeedVideoIds(latest_time *int64) ([]uint, error) {
 		Count: MaxVideoNum,
 	}).Result()
 	if err != nil {
+		log.FieldLog("redis", "error", "get video feed ids failed")
 		return []uint{}, err
 	}
+
 	*latest_time = int64(zVids[len(zVids)-1].Score)
 	vids := make([]uint, len(zVids))
 	for i, zVid := range zVids {

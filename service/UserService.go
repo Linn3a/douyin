@@ -5,14 +5,13 @@ import (
 	// "sync/atomic"
 	"douyin/models"
 	"douyin/utils/jwt"
+	"douyin/utils/log"
 )
-
-
-
 
 func GetUserByName(userName string) (models.User, error) {
 	tmp := models.User{}
 	if err := models.DB.Where("name = ?", userName).First(&tmp).Error; err != nil {
+		log.FieldLog("gorm", "error", "get user by name error")
 		return tmp, err
 	}
 	return tmp, nil
@@ -42,6 +41,7 @@ func GetUsersByIds(IDs []uint) ([]models.User, error) {
 func GenerateToken(u *models.User) (string, error) {
 	token, err := jwt.JwtClient.NewToken(u.ID)
 	if err != nil {
+		log.FieldLog("jwt", "error", "create token error")
 		return "token", err
 	}
 	return token, nil

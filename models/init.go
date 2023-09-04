@@ -50,9 +50,9 @@ var RedisClient *redis.Client
 func InitRedis() error {
 	fmt.Println("connect Redis ...")
 	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     config.GlobalConfig.Redis.Address,
-		Password: config.GlobalConfig.Redis.Password,
-		DB:       config.GlobalConfig.Redis.DB,
+		Addr: config.GlobalConfig.Redis.Address,
+		//Password: config.GlobalConfig.Redis.Password,
+		DB: config.GlobalConfig.Redis.DB,
 		//超时
 		// ReadTimeout:  time.Duration(config.GlobalConfig.Redis.ReadTimeout) * time.Second,
 		// WriteTimeout: time.Duration(config.GlobalConfig.Redis.WriteTimeout) * time.Second,

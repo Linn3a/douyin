@@ -2,8 +2,8 @@ package rabbitmq
 
 import (
 	"douyin/models"
+	"douyin/utils/log"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -33,7 +33,6 @@ func NewCommentRabbitMQ(queueName string) *CommentMQ {
 	return CommentMQ
 }
 
-
 var RmqCommentAdd *CommentMQ
 var RmqCommentDel *CommentMQ
 
@@ -50,7 +49,7 @@ func InitCommentRabbitMQ() {
 func (l *CommentMQ) Publish(message string) {
 
 	_, err := l.channel.QueueDeclare(
-		l.queueName,false, false, false, false, nil)
+		l.queueName, false, false, false, false, nil)
 	if err != nil {
 		panic(fmt.Sprintf("%s:%s\n", err, "声明Comment队列失败"))
 	}
@@ -81,12 +80,12 @@ func (l *CommentMQ) Consumer() {
 
 	//2、接收消息
 	messages, err1 := l.channel.Consume(
-		l.queueName,	//队列名
-		"",			//消费者名，用来区分多个消费者，以实现公平分发或均等分发策略
-		true,		//是否自动应答
-		false,		//是否具有排他性
-		false,		//是否接收同一个连接中的消息，若为true，则只能接收别的conn中发送的消息
-		false,		//消息队列是否阻塞
+		l.queueName, //队列名
+		"",          //消费者名，用来区分多个消费者，以实现公平分发或均等分发策略
+		true,        //是否自动应答
+		false,       //是否具有排他性
+		false,       //是否接收同一个连接中的消息，若为true，则只能接收别的conn中发送的消息
+		false,       //消息队列是否阻塞
 		nil,
 	)
 	if err1 != nil {
@@ -104,13 +103,14 @@ func (l *CommentMQ) Consumer() {
 
 	}
 
-	log.Printf("[*] Waiting for messagees,To exit press CTRL+C")
+	log.FieldLog("commentMQ", "info", "comment consumer start")
+	//log.Logger.Info("[*] Waiting for messagees,To exit press CTRL+C")
 
 	<-forever
 
 }
 
-//consumerCommentAdd 赞关系添加的消费方式。
+// consumerCommentAdd 赞关系添加的消费方式。
 func (l *CommentMQ) consumerCommentAdd(messages <-chan amqp.Delivery) {
 	for d := range messages {
 		// 参数解析。
@@ -130,12 +130,14 @@ func (l *CommentMQ) consumerCommentAdd(messages <-chan amqp.Delivery) {
 		}
 
 		err := models.DB.Create(&comment).Error
-		if err!=nil {fmt.Println(err) }
-	
+		if err != nil {
+			fmt.Println(err)
+		}
+
 	}
 }
 
-//consumerLikeDel 赞关系删除的消费方式。
+// consumerLikeDel 赞关系删除的消费方式。
 func (l *CommentMQ) consumerCommentDel(messages <-chan amqp.Delivery) {
 	for d := range messages {
 		// 参数解析。
@@ -143,6 +145,8 @@ func (l *CommentMQ) consumerCommentDel(messages <-chan amqp.Delivery) {
 		commentId, _ := strconv.Atoi(params)
 
 		err := models.DB.Delete(&models.Comment{}, uint(commentId)).Error
-		if err!=nil {fmt.Println(err) }
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }

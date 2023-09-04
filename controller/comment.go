@@ -4,6 +4,7 @@ import (
 	"douyin/models"
 	"douyin/service"
 	"douyin/utils/jwt"
+	"douyin/utils/log"
 	"douyin/utils/validator"
 	"fmt"
 	"strconv"
@@ -50,18 +51,21 @@ func CommentAction(c *fiber.Ctx) error {
 		text := request.CommentText
 		comment, err := service.CreateComment(uid, uint(vid), text)
 		if err != nil {
-			fmt.Printf("db create comment failed: %v\n", err)
+			log.FieldLog("gorm", "error", fmt.Sprintf("create comment failed :%v", err))
 			return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 4, StatusMsg: "create comment failed"}})
 		}
 		commentInfo := service.GenerateCommentInfo(comment)
 		userInfo, err := service.GetUserInfoById(comment.UserId)
 		if err != nil {
-			fmt.Printf("get user info failed: %v\n", err)
+			log.FieldLog("gorm", "error", fmt.Sprintf("get user info failed :%v", err))
 			return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 5, StatusMsg: "get userinfo failed"}})
 		}
 		commentInfo.User = &userInfo
 		// 填充is follow 信息
-		service.GetUserIsFollow(commentInfo.User, uid)
+		err = service.GetUserIsFollow(commentInfo.User, uid)
+		if err != nil {
+			return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 6, StatusMsg: "get user is follow failed"}})
+		}
 		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{
 			Response: Response{StatusCode: 0},
 			Comment:  &commentInfo,
@@ -70,7 +74,7 @@ func CommentAction(c *fiber.Ctx) error {
 		commentId := request.CommentID
 		cid, _ := strconv.Atoi(commentId)
 		if err := service.DeleteComment(uint(cid)); err != nil {
-			fmt.Printf("db delete comment failed: %v\n", err)
+			log.FieldLog("gorm", "error", fmt.Sprintf("db delete comment failed: %v", err))
 			return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 6, StatusMsg: "delete comment failed"}})
 		}
 		return c.Status(fiber.StatusOK).JSON(CommentActionResponse{Response: Response{StatusCode: 0}})
@@ -94,17 +98,20 @@ func CommentList(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 0, StatusMsg: "no comments found"}, CommentList: []models.CommentInfo{}})
 	}
 	uids := make([]uint, len(cids))
-	for i, c := range comments {
-		uids[i] = c.UserId
+	for i, comment := range comments {
+		uids[i] = comment.UserId
 	}
 	userInfos, _ := service.GetUserInfoMapByIds(uids)
 	commentInfos := make([]models.CommentInfo, len(cids))
-	for i, c := range comments {
-		commentInfos[i] = service.GenerateCommentInfo(&c)
-		userInfo := userInfos[c.UserId]
+	for i, comment := range comments {
+		commentInfos[i] = service.GenerateCommentInfo(&comment)
+		userInfo := userInfos[comment.UserId]
 		commentInfos[i].User = &userInfo
 		// 填充is follow信息
-		service.GetUserIsFollow(commentInfos[i].User, uid)
+		err := service.GetUserIsFollow(commentInfos[i].User, uid)
+		if err != nil {
+			return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 6, StatusMsg: "get user is follow failed"}})
+		}
 	}
 	return c.Status(fiber.StatusOK).JSON(CommentListResponse{
 		Response:    Response{StatusCode: 0},

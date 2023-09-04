@@ -3,7 +3,7 @@ package controller
 import (
 	"douyin/models"
 	"douyin/service"
-	"fmt"
+	"douyin/utils/log"
 	"strconv"
 
 	"douyin/utils/jwt"
@@ -48,7 +48,6 @@ func Register(c *fiber.Ctx) error {
 	password := request.Password
 
 	if _, err := service.GetUserByName(username); err == nil {
-		fmt.Println("The user exits")
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
 				StatusCode: 3,
@@ -65,7 +64,8 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	if err := service.CreateUser(&newUser); err != nil {
-		fmt.Println("插入失败", err)
+		log.FieldLog("gorm", "error", "insert user error")
+
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
 				StatusCode: 4,
@@ -75,11 +75,10 @@ func Register(c *fiber.Ctx) error {
 			Token:  "",
 		})
 	}
-	fmt.Println("插入成功")
 
 	token, err := service.GenerateToken(&newUser)
 	if err != nil {
-		fmt.Println("创建token失败")
+		log.FieldLog("jwt", "error", "create token error")
 		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 			Response: Response{
 				StatusCode: 5,
@@ -89,7 +88,6 @@ func Register(c *fiber.Ctx) error {
 		})
 	}
 
-	fmt.Printf("token is : %s", token)
 	return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
 		Response: Response{
 			StatusCode: 0,
@@ -167,15 +165,33 @@ func UserInfo(c *fiber.Ctx) error {
 			Response: Response{StatusCode: 5, StatusMsg: "user not exits"}})
 	}
 	userInfo := service.GenerateUserInfo(&user)
+
 	err = service.GetUserFollowCount(&userInfo)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(UserResponse{
+			Response: Response{StatusCode: 6, StatusMsg: "user info construct error"}})
+	}
 	err = service.GetUserFollowerCount(&userInfo)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(UserResponse{
+			Response: Response{StatusCode: 6, StatusMsg: "user info construct error"}})
+	}
 	err = service.GetUserTotalFavorited(&userInfo)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(UserResponse{
+			Response: Response{StatusCode: 6, StatusMsg: "user info construct error"}})
+	}
 	err = service.GetUserWorkCount(&userInfo)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(UserResponse{
+			Response: Response{StatusCode: 6, StatusMsg: "user info construct error"}})
+	}
 	err = service.GetUserFavoriteCount(&userInfo)
 	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(UserResponse{
-			Response:  Response{StatusCode: 6, StatusMsg: "user info construct error"}})
+			Response: Response{StatusCode: 6, StatusMsg: "user info construct error"}})
 	}
+
 	return c.Status(fiber.StatusOK).JSON(
 		UserResponse{
 			Response: Response{StatusCode: 0},

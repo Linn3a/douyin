@@ -59,7 +59,7 @@ func RelationAction(c *fiber.Ctx) error {
 	if actionType == 1 {
 		err = service.FollowAction(fromId, toId)
 	} else {
-		err = service.CancleAction(fromId, toId)
+		err = service.CancelAction(fromId, toId)
 	}
 	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(Response{StatusCode: 1, StatusMsg: err.Error()})
@@ -153,11 +153,11 @@ func FriendList(c *fiber.Ctx) error {
 
 	friendIds, err := service.GetFriendIds(uid)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 5, StatusMsg:  "redis 查询好友列表失败",},UserList: nil,})
+		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 5, StatusMsg: "redis 查询好友列表失败"}, UserList: nil})
 	}
 	friendInfos, err := service.GetUserInfosByIds(friendIds)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 6, StatusMsg:  "查询好友列表失败",},UserList: nil,})
+		return c.Status(fiber.StatusOK).JSON(UserListResponse{Response: Response{StatusCode: 6, StatusMsg: "查询好友列表失败"}, UserList: nil})
 	}
 	friendList := make([]FriendInfo, len(friendIds))
 	for i, friendInfo := range friendInfos {

@@ -36,6 +36,7 @@ func Feed(c *fiber.Ctx) error {
 			Response: Response{StatusCode: 1, StatusMsg: err.Error()},
 		})
 	}
+
 	nextTime := latestTime
 	videoInfos, err := service.GetVideoInfosByIds(vids)
 	if err != nil {
@@ -45,17 +46,28 @@ func Feed(c *fiber.Ctx) error {
 	}
 	token := c.Query("token")
 	var uid uint
-	if err, _ := jwt.JwtClient.AuthTokenValid(c, &Response{}, &uid, token); err == nil {
+	if err, _ = jwt.JwtClient.AuthTokenValid(c, &Response{}, &uid, token); err == nil {
 		// 如果登陆 填充video favorite信息
 		// 如果登陆 填充author follow信息
 		for i := 0; i < len(videoInfos); i++ {
-			service.GetVideoIsFavorite(&videoInfos[i], uid)
-			service.GetUserIsFollow(videoInfos[i].Author, uid)
+			err = service.GetVideoIsFavorite(&videoInfos[i], uid)
+			if err != nil {
+				return c.Status(fiber.StatusOK).JSON(FeedResponse{
+					Response: Response{StatusCode: 2, StatusMsg: err.Error()},
+				})
+			}
+			err = service.GetUserIsFollow(videoInfos[i].Author, uid)
+			if err != nil {
+				return c.Status(fiber.StatusOK).JSON(FeedResponse{
+					Response: Response{StatusCode: 2, StatusMsg: err.Error()},
+				})
+			}
 		}
 	}
+
 	return c.Status(fiber.StatusOK).JSON(FeedResponse{
 		Response:  Response{StatusCode: 0, StatusMsg: err.Error()},
 		VideoList: videoInfos,
-		NextTime: nextTime,
+		NextTime:  nextTime,
 	})
 }

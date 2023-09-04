@@ -2,10 +2,10 @@ package service
 
 import (
 	"douyin/config"
+	"douyin/utils/log"
 	"fmt"
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/google/uuid"
-	"log"
 	"mime/multipart"
 	"path/filepath"
 )
@@ -17,15 +17,17 @@ func InitOSS() error {
 		config.GlobalConfig.Database.OSS.AccessKeyID,
 		config.GlobalConfig.Database.OSS.AccessKeySecret)
 	if err != nil {
-		log.Printf("oss init failed: %v", err)
+		log.FieldLog("oss", "error", fmt.Sprintf("oss init failed: %v", err))
 		return err
 	}
 
 	bucket, err = client.Bucket(config.GlobalConfig.Database.OSS.BucketName)
 	if err != nil {
-		fmt.Printf("oss get bucket failed: %v", err)
+		log.FieldLog("oss", "error", fmt.Sprintf("get bucket failed: %v", err))
 		return err
 	}
+
+	log.FieldLog("oss", "info", "oss init success")
 	return nil
 }
 
@@ -40,13 +42,13 @@ func UploadVideoToOSS(videoReader *multipart.FileHeader) (string, string, error)
 	fmt.Printf("videoName:%v\n", videoName)
 	video, err := videoReader.Open()
 	if err != nil {
-		log.Printf("oss open video fileReader failed: %v", err)
+		log.FieldLog("oss", "error", fmt.Sprintf("open video fileReader failed: %v", err))
 		return "", "", err
 	}
 
 	err = bucket.PutObject(videoName, video)
 	if err != nil {
-		log.Printf("oss upload video failed: %v", err)
+		log.FieldLog("oss", "error", fmt.Sprintf("upload video failed: %v", err))
 		return "", "", err
 	}
 
