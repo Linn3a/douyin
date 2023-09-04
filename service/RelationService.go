@@ -56,7 +56,7 @@ func FollowAction(fromId uint, toId uint) error {
 	sb.WriteString(" ")
 	sb.WriteString(strconv.Itoa(int(toId)))
 	rabbitmq.RmqFollowAdd.Publish(sb.String())
-	fmt.Println("关注消息入队成功")
+	log.FieldLog("followMQ", "info", fmt.Sprintf("successfully add follow: %v", sb.String()))
 	models.RedisClient.SAdd(RedisCtx, SOCIAL_FOLLOWING_KEY+strconv.Itoa(int(fromId)), toId)
 	models.RedisClient.SAdd(RedisCtx, SOCIAL_FOLLOWER_KEY+strconv.Itoa(int(toId)), fromId)
 	return nil
@@ -235,7 +235,6 @@ func GetFollowCnt(Id uint) (int64, error) {
 		Table("user_follows").
 		Where("follower_id=?", Id).
 		Count(&cnt).Error; err != nil {
-		fmt.Println("cnt:", cnt)
 		return 0, err
 	}
 	return cnt, nil
@@ -249,7 +248,6 @@ func GetFollowerCnt(Id uint) (int64, error) {
 		Table("user_follows").
 		Where("followed_id=?", Id).
 		Count(&cnt).Error; err != nil {
-		fmt.Println("cnt:", cnt)
 		return 0, err
 	}
 	return cnt, nil

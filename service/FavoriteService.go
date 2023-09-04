@@ -79,6 +79,10 @@ func GetFavoriteVideoIds(uid uint) ([]uint, error) {
 
 // audience2video
 func AddFavoriteVideo(uid uint, vid uint) error {
+	if uid == 0 {
+		log.FieldLog("favorite service", "info", "favorite action from unauthorized user, ignore")
+		return nil
+	}
 	if err := models.RedisClient.SAdd(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err(); err != nil {
 		return err
 	}
@@ -94,7 +98,7 @@ func AddFavoriteVideo(uid uint, vid uint) error {
 	sb.WriteString(" ")
 	sb.WriteString(strconv.Itoa(int(vid)))
 	rabbitmq.RmqLikeAdd.Publish(sb.String())
-	fmt.Println("like消息入队成功")
+	log.FieldLog("likeMQ", "info", fmt.Sprintf("successfully add like: %v", sb.String()))
 	return nil
 }
 
@@ -115,7 +119,7 @@ func DeleteFavoriteVideo(uid uint, vid uint) error {
 	sb.WriteString(" ")
 	sb.WriteString(strconv.Itoa(int(vid)))
 	rabbitmq.RmqLikeDel.Publish(sb.String())
-	fmt.Println("like取消消息入队成功")
+	log.FieldLog("likeMQ", "info", fmt.Sprintf("successfully delete like: %v", sb.String()))
 	return nil
 }
 

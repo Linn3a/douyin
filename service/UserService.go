@@ -11,7 +11,6 @@ import (
 func GetUserByName(userName string) (models.User, error) {
 	tmp := models.User{}
 	if err := models.DB.Where("name = ?", userName).First(&tmp).Error; err != nil {
-		log.FieldLog("gorm", "error", "get user by name error")
 		return tmp, err
 	}
 	return tmp, nil

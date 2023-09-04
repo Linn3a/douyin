@@ -53,8 +53,6 @@ func Publish(c *fiber.Ctx) error {
 			StatusMsg:  err.Error(),
 		})
 	}
-	fmt.Printf("videoUrl:%v\n", videoUrl)
-	fmt.Printf("coverUrl:%v\n", coverUrl)
 
 	if err := service.CreateVideo(title, videoUrl, coverUrl, uid); err != nil {
 		log.FieldLog("gorm", "error", fmt.Sprintf("Mysql create video error:%v", err))
@@ -85,22 +83,21 @@ func PublishList(c *fiber.Ctx) error {
 
 	vids, err := service.GetVideoIdsByUserId(uint(uid))
 	if err != nil {
+		return c.Status(http.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 5, StatusMsg: "redis get video error"}})
+	}
+	if len(vids) == 0 {
 		return c.Status(http.StatusOK).JSON(VideoListResponse{
 			Response: Response{
-				StatusCode: 5,
-				StatusMsg:  err.Error(),
+				StatusCode: 0,
+				StatusMsg:  "暂时没有发布视频",
 			},
+			VideoList: []models.VideoInfo{},
 		})
 	}
 
 	videoInfos, err := service.GetVideoInfosByIds(vids)
 	if err != nil {
-		return c.Status(http.StatusOK).JSON(VideoListResponse{
-			Response: Response{
-				StatusCode: 6,
-				StatusMsg:  err.Error(),
-			},
-		})
+		return c.Status(http.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 6, StatusMsg: "sql get video error"}})
 	}
 	// 填充isfavorite信息
 	for i := 0; i < len(videoInfos); i++ {

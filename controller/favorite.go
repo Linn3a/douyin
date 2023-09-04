@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"douyin/models"
 	"douyin/service"
 	"douyin/utils/jwt"
 	"douyin/utils/log"
@@ -64,6 +65,9 @@ func FavoriteList(c *fiber.Ctx) error {
 	vids, err := service.GetFavoriteVideoIds(uid)
 	if err != nil {
 		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 5, StatusMsg: "redis videos get error" + err.Error()}})
+	}
+	if len(vids) == 0 {
+		return c.Status(fiber.StatusOK).JSON(VideoListResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无点赞视频"}, VideoList: []models.VideoInfo{}})
 	}
 	videoInfos, err := service.GetVideoInfosByIds(vids)
 	if err != nil {

@@ -131,7 +131,7 @@ func (l *CommentMQ) consumerCommentAdd(messages <-chan amqp.Delivery) {
 
 		err := models.DB.Create(&comment).Error
 		if err != nil {
-			fmt.Println(err)
+			log.FieldLog("gorm", "error", fmt.Sprintf("create comment failed :%v", err))
 		}
 
 	}
@@ -146,7 +146,7 @@ func (l *CommentMQ) consumerCommentDel(messages <-chan amqp.Delivery) {
 
 		err := models.DB.Delete(&models.Comment{}, uint(commentId)).Error
 		if err != nil {
-			fmt.Println(err)
+			log.FieldLog("gorm", "error", fmt.Sprintf("del comment failed :%v", err))
 		}
 	}
 }

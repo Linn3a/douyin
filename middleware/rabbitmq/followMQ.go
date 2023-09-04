@@ -124,14 +124,14 @@ func (f *FollowMQ) consumerFollowAdd(msgs <-chan amqp.Delivery) {
 		toId, _ := strconv.Atoi(params[0])
 		fromId, _ := strconv.Atoi(params[1])
 		// 日志记录。
-		fmt.Printf("CALL FollowAction(%v,%v)", fromId, toId)
+		log.FieldLog("followMQ", "info", fmt.Sprintf("CALL FollowAction(%v,%v)", fromId, toId))
 		//执行FollowAction关注操作
 		relation := models.Relation{
 			FollowedId: uint(toId),
 			FollowerId: uint(fromId),
 		}
 		if err := models.DB.Table("user_follows").Create(&relation).Error; err != nil { //创建记录
-			fmt.Println(err)
+			log.FieldLog("gorm", "error", fmt.Sprintf("create follow relation failed: %v", err))
 		}
 	}
 }
@@ -144,12 +144,14 @@ func (f *FollowMQ) consumerFollowDel(msgs <-chan amqp.Delivery) {
 		fromId, _ := strconv.Atoi(params[0])
 		toId, _ := strconv.Atoi(params[1])
 		// 日志记录。
-		fmt.Printf("CALL delFollowRelation(%v,%v)", fromId, toId)
+		log.FieldLog("followMQ", "info", fmt.Sprintf("CALL delFollowRelation(%v,%v)", fromId, toId))
 		user1 := models.User{}
 		user1.ID = uint(fromId)
 		user2 := models.User{}
 		user2.ID = uint(toId)
 		err := models.DB.Model(&user1).Association("Follow").Delete(user2)
-		fmt.Println(err)
+		if err != nil {
+			log.FieldLog("gorm", "error", fmt.Sprintf("delFollowRelation(%v,%v) failed: %v", fromId, toId, err))
+		}
 	}
 }

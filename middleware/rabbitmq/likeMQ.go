@@ -120,7 +120,7 @@ func (l *LikeMQ) consumerLikeAdd(messages <-chan amqp.Delivery) {
 		video.ID = uint(videoId)
 		err := models.DB.Model(&user).Association("LikeVideo").Append(&video)
 		if err != nil {
-			fmt.Println(err)
+			log.FieldLog("gorm", "error", fmt.Sprintf("create like relation failed: %v", err))
 		}
 
 	}
@@ -140,7 +140,7 @@ func (l *LikeMQ) consumerLikeDel(messages <-chan amqp.Delivery) {
 		video.ID = uint(videoId)
 		err := models.DB.Model(&user).Association("LikeVideo").Delete(&video)
 		if err != nil {
-			fmt.Println(err)
+			log.FieldLog("gorm", "error", fmt.Sprintf("delete like relation failed: %v", err))
 		}
 	}
 }

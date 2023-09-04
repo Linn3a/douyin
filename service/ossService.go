@@ -39,7 +39,6 @@ func UploadVideoToOSS(videoReader *multipart.FileHeader) (string, string, error)
 
 	filename := filepath.Base(videoReader.Filename)
 	videoName := generateFileName(filename)
-	fmt.Printf("videoName:%v\n", videoName)
 	video, err := videoReader.Open()
 	if err != nil {
 		log.FieldLog("oss", "error", fmt.Sprintf("open video fileReader failed: %v", err))

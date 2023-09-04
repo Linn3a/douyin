@@ -3,6 +3,7 @@ package service
 import (
 	"douyin/middleware/rabbitmq"
 	"douyin/models"
+	"douyin/utils/log"
 	"fmt"
 	"strconv"
 	"strings"
@@ -31,7 +32,7 @@ func GetCommentIdsByVideoId(vid uint) ([]uint, error) {
 }
 
 func CreateComment(uid uint, vid uint, text string) (*models.Comment, error) {
-	
+
 	// err := models.DB.Create(&comment).Error
 	// 关注消息加入消息队列
 	cIdStr, _ := models.RedisClient.Get(RedisCtx, INTERACT_MAX_COMMENT_KEY).Result()
@@ -49,13 +50,13 @@ func CreateComment(uid uint, vid uint, text string) (*models.Comment, error) {
 	sb.WriteString(" ")
 	sb.WriteString(strconv.Itoa(int(vid)))
 	rabbitmq.RmqCommentAdd.Publish(sb.String())
-	fmt.Println("评论消息入队成功")
+	log.FieldLog("commentMQ", "info", fmt.Sprintf("successfully add comment: %v", sb.String()))
 	comment := models.Comment{
 		Model: gorm.Model{
 			ID: cId,
 		},
 		Content: text,
-		UserId: uid,
+		UserId:  uid,
 		VideoId: vid,
 	}
 	return &comment, nil
@@ -63,7 +64,7 @@ func CreateComment(uid uint, vid uint, text string) (*models.Comment, error) {
 
 func DeleteComment(id uint) error {
 	rabbitmq.RmqCommentDel.Publish(strconv.FormatInt(int64(id), 10))
-	fmt.Println("删除评论消息入队成功")
+	log.FieldLog("commentMQ", "info", fmt.Sprintf("successfully delete comment id: %v", id))
 	return nil
 }
 
@@ -76,7 +77,7 @@ func GetCommentsByIds(cids []uint) ([]models.Comment, error) {
 func GenerateCommentInfo(c *models.Comment) models.CommentInfo {
 	return models.CommentInfo{
 		ID:         int64(c.ID),
-		User:      	nil,
+		User:       nil,
 		Content:    c.Content,
 		CreateDate: time.Now().String(),
 	}

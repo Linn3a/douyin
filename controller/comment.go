@@ -92,23 +92,32 @@ func CommentList(c *fiber.Ctx) error {
 		return httpErr
 	}
 	vid, _ := strconv.Atoi(request.VideoID)
-	cids, _ := service.GetCommentIdsByVideoId(uint(vid))
-	comments, _ := service.GetCommentsByIds(cids)
+	cids, err := service.GetCommentIdsByVideoId(uint(vid))
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 5, StatusMsg: "redis get comments error"}})
+	}
 	if len(cids) == 0 {
-		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 0, StatusMsg: "no comments found"}, CommentList: []models.CommentInfo{}})
+		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 0, StatusMsg: "暂无评论信息"}, CommentList: []models.CommentInfo{}})
+	}
+	comments, err := service.GetCommentsByIds(cids)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 6, StatusMsg: "sql get comments error"}})
 	}
 	uids := make([]uint, len(cids))
 	for i, comment := range comments {
 		uids[i] = comment.UserId
 	}
-	userInfos, _ := service.GetUserInfoMapByIds(uids)
+	userInfos, err := service.GetUserInfoMapByIds(uids)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 7, StatusMsg: "get user infos error"}})
+	}
 	commentInfos := make([]models.CommentInfo, len(cids))
 	for i, comment := range comments {
 		commentInfos[i] = service.GenerateCommentInfo(&comment)
 		userInfo := userInfos[comment.UserId]
 		commentInfos[i].User = &userInfo
 		// 填充is follow信息
-		err := service.GetUserIsFollow(commentInfos[i].User, uid)
+		err = service.GetUserIsFollow(commentInfos[i].User, uid)
 		if err != nil {
 			return c.Status(fiber.StatusOK).JSON(CommentListResponse{Response: Response{StatusCode: 6, StatusMsg: "get user is follow failed"}})
 		}

@@ -5,9 +5,9 @@ import (
 	"douyin/service"
 	"douyin/utils/jwt"
 	"douyin/utils/validator"
+	"github.com/gofiber/fiber/v2"
 	"net/http"
 	"strconv"
-	"github.com/gofiber/fiber/v2"
 )
 
 type MessageActionRequest struct {
@@ -41,6 +41,10 @@ func MessageAction(c *fiber.Ctx) error {
 	}
 	toIdInt, _ := strconv.Atoi(request.ToUserID)
 	toId := uint(toIdInt)
+
+	if fromId == toId {
+		return c.Status(http.StatusOK).JSON(Response{StatusCode: 5, StatusMsg: "不能给自己发送消息"})
+	}
 	content := request.Content
 
 	service.AddMessage(toId, fromId, content)
@@ -71,27 +75,21 @@ func MessageChat(c *fiber.Ctx) error {
 		preMsgTime, _ = strconv.ParseInt(preMsgTimeStr, 10, 64)
 	}
 	mids, err := service.GetMessagesIds(fromId, toId, &preMsgTime)
-	nextPreMsgTime := preMsgTime
-	// msgList, err := service.GetLatestMessageAfter(fromId, toId, preMsgTime)
-	messages, err := service.GetMessagesByIds(mids)
-	// 无消息
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(ChatResponse{
-			Response:    Response{StatusCode: 1, StatusMsg: "no message"},
-			MessageList: nil,
-			PreMsgTime:  1546926630,
-		})
+		return c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 5, StatusMsg: "redis get message error"}, PreMsgTime: 1546926630})
+	}
+	if len(mids) == 0 {
+		c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 0, StatusMsg: "消息列表为空"}, MessageList: []models.MessageInfo{}, PreMsgTime: 1546926630})
+	}
+	nextPreMsgTime := preMsgTime
+	messages, err := service.GetMessagesByIds(mids)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(ChatResponse{Response: Response{StatusCode: 6, StatusMsg: "sql get message error"}, PreMsgTime: 1546926630})
 	}
 	messageInfos := make([]models.MessageInfo, len(mids))
 	for i, m := range messages {
 		messageInfos[i] = service.GenerateMessageInfo(&m)
 	}
-	// var nextPreMsgTime int64
-	// if len(msgList) == 0 {
-	// 	nextPreMsgTime = 1546926630
-	// } else {
-	// 	nextPreMsgTime = msgList[len(msgList)-1].CreateTime
-	// }
 	return c.Status(fiber.StatusOK).JSON(ChatResponse{
 		Response:    Response{StatusCode: 0, StatusMsg: "成功获取消息！"},
 		MessageList: messageInfos,

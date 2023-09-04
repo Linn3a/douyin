@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"douyin/models"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -91,7 +90,6 @@ func InitComment2Redis() {
 		vid := r.VideoID
 		cid := r.ID
 		// panic(cid)
-		fmt.Println(cid)
 		if cid > maxCid {
 			maxCid = cid
 		}
