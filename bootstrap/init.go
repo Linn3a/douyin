@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"douyin/config"
 	"douyin/controller"
+	"douyin/middleware"
+
 	"douyin/models"
 	"douyin/service"
 	"douyin/utils/jwt"
@@ -11,7 +13,6 @@ import (
 
 	"douyin/middleware/rabbitmq"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func Init() (*fiber.App, error) {
@@ -40,16 +41,11 @@ func Init() (*fiber.App, error) {
 	}
 
 	app := fiber.New()
-	controller.RegisterRoutes(app)
 
 	// Initialize default config
-	app.Use(cors.New())
+	app.Use(middleware.Logging())
 
-	// Or extend your config for customization
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		//	AllowHeaders: "Origin, Content-Type, Accept",
-	}))
+	controller.RegisterRoutes(app)
 
 	return app, nil
 }
