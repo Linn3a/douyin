@@ -6,9 +6,9 @@ import (
 	"douyin/utils/log"
 	"fmt"
 	"strconv"
-	"strings"
+	// "strings"
 	"time"
-
+	"encoding/json"
 	"gorm.io/gorm"
 )
 
@@ -41,16 +41,15 @@ func CreateComment(uid uint, vid uint, text string) (*models.Comment, error) {
 	cId := uint(cIdInt)
 	cId = cId + 1
 	models.RedisClient.SAdd(RedisCtx, INTERACT_COMMENT_KEY+strconv.Itoa(int(vid)), cId)
-	sb := strings.Builder{}
-	sb.WriteString(strconv.Itoa(int(cId)))
-	sb.WriteString(" ")
-	sb.WriteString(text)
-	sb.WriteString(" ")
-	sb.WriteString(strconv.Itoa(int(uid)))
-	sb.WriteString(" ")
-	sb.WriteString(strconv.Itoa(int(vid)))
-	rabbitmq.RmqCommentAdd.Publish(sb.String())
-	log.FieldLog("commentMQ", "info", fmt.Sprintf("successfully add comment: %v", sb.String()))
+	// sb := strings.Builder{}
+	// sb.WriteString(strconv.Itoa(int(cId)))
+	// sb.WriteString(" ")
+	// sb.WriteString(text)
+	// sb.WriteString(" ")
+	// sb.WriteString(strconv.Itoa(int(uid)))
+	// sb.WriteString(" ")
+	// sb.WriteString(strconv.Itoa(int(vid)))
+
 	comment := models.Comment{
 		Model: gorm.Model{
 			ID: cId,
@@ -59,6 +58,13 @@ func CreateComment(uid uint, vid uint, text string) (*models.Comment, error) {
 		UserId:  uid,
 		VideoId: vid,
 	}
+	jsonComment,err := json.Marshal(comment)
+	if err != nil{
+		fmt.Println("comment转换为json错误")
+	}
+	rabbitmq.RmqCommentAdd.Publish(string(jsonComment))
+	log.FieldLog("commentMQ", "info", fmt.Sprintf("successfully add comment: %v", string(jsonComment)))
+
 	return &comment, nil
 }
 
