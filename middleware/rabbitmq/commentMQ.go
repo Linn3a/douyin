@@ -116,8 +116,7 @@ func (l *CommentMQ) consumerCommentAdd(messages <-chan amqp.Delivery) {
 		// 参数解析。
 		// params := strings.Split(fmt.Sprintf("%s", d.Body), " ")
 		comment := models.Comment{}
-		err := json.Unmarshal([]byte(d.Body),&comment)
-		if err != nil{
+		if err := json.Unmarshal([]byte(d.Body),&comment); err != nil{
 			fmt.Println(err)
 		}
 		fmt.Println(comment)
@@ -135,8 +134,7 @@ func (l *CommentMQ) consumerCommentAdd(messages <-chan amqp.Delivery) {
 		// 	Content: text,
 		// }
 
-		err := models.DB.Create(&comment).Error
-		if err != nil {
+		if err := models.DB.Create(&comment).Error; err != nil {
 			log.FieldLog("gorm", "error", fmt.Sprintf("create comment failed :%v", err))
 		}
 
