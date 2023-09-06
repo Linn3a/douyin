@@ -47,8 +47,15 @@ func Register(c *fiber.Ctx) error {
 	username := request.Username
 	password := request.Password
 
-	if _, err := service.GetUserByName(username); err == nil {
-		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{Response: Response{StatusCode: 3, StatusMsg: "User already exist"}})
+	if user, err := service.GetUserByName(username); err == nil {
+		return c.Status(fiber.StatusOK).JSON(UserLoginResponse{
+			Response: Response{
+				StatusCode: 3,
+				StatusMsg: "User already exist",
+			},
+			UserID: int64(user.ID),
+			Token: "",
+		})
 	}
 
 	newUser := models.User{
@@ -77,6 +84,7 @@ func Register(c *fiber.Ctx) error {
 				StatusMsg:  "Unable to create token",
 			},
 			UserID: int64(newUser.ID),
+			Token: "",
 		})
 	}
 
