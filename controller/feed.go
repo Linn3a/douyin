@@ -65,7 +65,7 @@ func Feed(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(FeedResponse{
-		Response:  Response{StatusCode: 0, StatusMsg: err.Error()},
+		Response:  Response{StatusCode: 0, StatusMsg: "get message success!"},
 		VideoList: videoInfos,
 		NextTime:  nextTime,
 	})

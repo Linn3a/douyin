@@ -83,13 +83,20 @@ func AddFavoriteVideo(uid uint, vid uint) error {
 		log.FieldLog("favorite service", "info", "favorite action from unauthorized user, ignore")
 		return nil
 	}
+	if flag, _ := models.RedisClient.SIsMember(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Result(); flag {
+		return fmt.Errorf("already liked")
+	}
 	if err := models.RedisClient.SAdd(RedisCtx, INTERACT_USER_FAVORITE_KEY+strconv.Itoa(int(uid)), vid).Err(); err != nil {
 		return err
 	}
 	if err := models.RedisClient.SAdd(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid).Err(); err != nil {
 		return err
 	}
-	if err := models.RedisClient.Incr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid))).Err(); err != nil {
+	video, err := GetVideoById(vid)
+	if err != nil {
+		return fmt.Errorf("video author get error")
+	}
+	if err := models.RedisClient.Incr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(video.AuthorID))).Err(); err != nil {
 		return err
 	}
 	// like消息加入消息队列
@@ -110,7 +117,11 @@ func DeleteFavoriteVideo(uid uint, vid uint) error {
 	if err := models.RedisClient.SRem(RedisCtx, INTERACT_VIDEO_FAVORITE_KEY+strconv.Itoa(int(vid)), uid).Err(); err != nil {
 		return err
 	}
-	if err := models.RedisClient.Decr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(uid))).Err(); err != nil {
+	video, err := GetVideoById(vid)
+	if err != nil {
+		return fmt.Errorf("video author get error")
+	}
+	if err := models.RedisClient.Decr(RedisCtx, INTERACT_USER_TOT_FAVORITE_KEY+strconv.Itoa(int(video.AuthorID))).Err(); err != nil {
 		return err
 	}
 	// like取消消息加入消息队列

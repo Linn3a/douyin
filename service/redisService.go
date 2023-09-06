@@ -113,7 +113,7 @@ func InitPublish2Redis() {
 		vid := r.ID
 		ctime := r.CreatedAt
 		models.RedisClient.SAdd(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(uid)), vid)
-		models.RedisClient.ZAdd(RedisCtx, BASIC_PUBLISH_KEY+strconv.Itoa(int(uid)), &redis.Z{Score: float64(ctime.UnixMilli()), Member: vid})
+		models.RedisClient.ZAdd(RedisCtx, BASIC_RECENT_PUBLISH_KEY, &redis.Z{Score: float64(ctime.UnixMilli()), Member: vid})
 	}
 }
 
